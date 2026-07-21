@@ -1,0 +1,23 @@
+[
+  {
+    "id": "4049de54-bfc0-4ac2-bd87-918da00e84b3",
+    "artist_id": "199b09c4-2020-442c-bfb4-13644ff75234",
+    "album_id": null,
+    "title": "tp",
+    "description": null,
+    "cover_url": "https://vbihqdqlzyihqcbmamtf.supabase.co/storage/v1/object/public/albums/199b09c4-2020-442c-bfb4-13644ff75234/1784634720590.jpg",
+    "audio_url": "https://vbihqdqlzyihqcbmamtf.supabase.co/storage/v1/object/public/music/199b09c4-2020-442c-bfb4-13644ff75234/1784634711290_mixkit-cinematic-horror-heartbeat-transition-489.wav",
+    "genre": "zed",
+    "duration": null,
+    "is_premium": false,
+    "price": null,
+    "published": true,
+    "plays": 0,
+    "downloads": 1,
+    "created_at": "2026-07-21T11:52:01.534691+00:00",
+    "updated_at": "2026-07-21T11:52:01.534691+00:00",
+    "featured_artists": null,
+    "producer": "k1",
+    "artist_display_name": "top"
+  }
+]

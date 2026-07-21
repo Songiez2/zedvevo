@@ -1,0 +1,201 @@
+[
+  {
+    "key": "app_name",
+    "value": "ZedVevo",
+    "updated_at": "2026-07-20T22:25:53.823705+00:00"
+  },
+  {
+    "key": "app_logo",
+    "value": null,
+    "updated_at": "2026-07-20T22:25:53.823705+00:00"
+  },
+  {
+    "key": "lipila_api_url",
+    "value": "https://lipila.net/api",
+    "updated_at": "2026-07-20T22:25:53.823705+00:00"
+  },
+  {
+    "key": "lipila_api_key",
+    "value": "",
+    "updated_at": "2026-07-20T22:25:53.823705+00:00"
+  },
+  {
+    "key": "jamendo_client_id",
+    "value": "",
+    "updated_at": "2026-07-20T22:25:53.823705+00:00"
+  },
+  {
+    "key": "homepage_sections",
+    "value": [
+      "featured_songs",
+      "trending",
+      "new_releases",
+      "featured_videos",
+      "artists",
+      "categories",
+      "products",
+      "events"
+    ],
+    "updated_at": "2026-07-20T22:25:53.823705+00:00"
+  },
+  {
+    "key": "app_tagline",
+    "value": "Zambia's Entertainment Platform",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "contact_email",
+    "value": "support@zedvevo.com",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "contact_phone",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "contact_address",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "social_facebook",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "social_twitter",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "social_instagram",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "social_youtube",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "social_tiktok",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "primary_color",
+    "value": "#2563eb",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "logo_url",
+    "value": null,
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "favicon_url",
+    "value": null,
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "smtp_host",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "smtp_port",
+    "value": "587",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "smtp_user",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "smtp_from_email",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "smtp_from_name",
+    "value": "ZedVevo",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "sms_provider",
+    "value": "none",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "sms_api_key",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "sms_sender_id",
+    "value": "ZedVevo",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "lipila_business_name",
+    "value": "ZedVevo Ltd",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "lipila_phone",
+    "value": "",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "lipila_mode",
+    "value": "demo",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "storage_max_file_mb",
+    "value": "50",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "allowed_audio_types",
+    "value": "mp3,wav,flac,aac",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "allowed_video_types",
+    "value": "mp4",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "max_upload_size_mb",
+    "value": "500",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "maintenance_mode",
+    "value": false,
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "registration_open",
+    "value": true,
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "require_email_verify",
+    "value": false,
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "max_login_attempts",
+    "value": "10",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  },
+  {
+    "key": "session_timeout_days",
+    "value": "30",
+    "updated_at": "2026-07-21T08:56:47.854135+00:00"
+  }
+]

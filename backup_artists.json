@@ -1,0 +1,20 @@
+[
+  {
+    "id": "199b09c4-2020-442c-bfb4-13644ff75234",
+    "artist_name": "zedvevo",
+    "cover_url": null,
+    "genre": null,
+    "location": null,
+    "social_links": {},
+    "verified": false,
+    "followers": 0,
+    "plan": null,
+    "plan_started_at": null,
+    "plan_expires_at": null,
+    "upload_limit": null,
+    "uploads_used": 1,
+    "active": true,
+    "created_at": "2026-07-21T11:11:22.464792+00:00",
+    "updated_at": "2026-07-21T11:52:02.759+00:00"
+  }
+]
