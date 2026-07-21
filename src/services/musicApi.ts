@@ -7,16 +7,19 @@ export function songToExternalMusic(
   s: Song & {
     artist?: {
       id?: string
-      username?: string
-      full_name?: string
-      avatar_url?: string
+      username?: string | null
+      full_name?: string | null
+      avatar_url?: string | null
     }
   }
 ): ExternalMusic {
+
   return {
     id: s.id,
     external_id: s.id,
+
     title: s.title,
+
     artist:
       s.artist_display_name ||
       s.artist?.full_name ||
@@ -24,18 +27,29 @@ export function songToExternalMusic(
       'Artist',
 
     album: null,
+
     cover: s.cover_url,
+
     audio_url: s.audio_url,
+
     genre: s.genre,
+
     source: 'upload',
+
     duration: s.duration,
+
     is_premium: s.is_premium,
+
     price: s.price,
+
     plays: s.plays || 0,
+
     downloads: s.downloads || 0,
+
     created_at: s.created_at,
   }
 }
+
 
 
 // Get uploaded ZedVevo songs
@@ -43,31 +57,57 @@ async function getUploadedSongs(
   limit: number
 ): Promise<ExternalMusic[]> {
 
-  const { data, error } = await supabase
+
+  const {
+    data,
+    error
+  } = await supabase
+
     .from('songs')
+
     .select('*')
-    .eq('published', true)
-    .order('created_at', {
-      ascending: false
-    })
+
+    .eq(
+      'published',
+      true
+    )
+
+    .order(
+      'created_at',
+      {
+        ascending: false
+      }
+    )
+
     .limit(limit)
 
 
+
   if (error) {
+
     console.error(
       'SONGS ERROR:',
       error
     )
+
     return []
+
   }
+
 
 
   if (!data || data.length === 0) {
+
+    console.log(
+      'NO SONGS FOUND'
+    )
+
     return []
+
   }
 
 
-  // Get artist names separately
+
   const artistIds = [
     ...new Set(
       data
@@ -77,39 +117,74 @@ async function getUploadedSongs(
   ]
 
 
-  let artists:any[] = []
+
+  let artists: {
+    id: string
+    username: string | null
+    full_name: string | null
+    avatar_url: string | null
+  }[] = []
 
 
-  if (artistIds.length) {
 
-    const { data: artistData } =
-      await supabase
-        .from('profiles')
-        .select(
-          'id,username,full_name,avatar_url'
-        )
-        .in(
-          'id',
-          artistIds
-        )
+  if (artistIds.length > 0) {
 
 
-    artists = artistData || []
-  }
+    const {
+      data: artistData,
+      error: artistError
+    } = await supabase
 
+      .from('profiles')
 
-  return data.map((song:any)=>{
+      .select(
+        'id,username,full_name,avatar_url'
+      )
 
-    const artist =
-      artists.find(
-        a => a.id === song.artist_id
+      .in(
+        'id',
+        artistIds
       )
 
 
+
+    if (artistError) {
+
+      console.error(
+        'ARTISTS ERROR:',
+        artistError
+      )
+
+    }
+
+
+
+    artists =
+      artistData || []
+
+  }
+
+
+
+  return data.map((song) => {
+
+
+    const artist =
+      artists.find(
+        (a) =>
+          a.id === song.artist_id
+      )
+
+
+
     return songToExternalMusic({
+
       ...song,
+
       artist
+
     })
+
 
   })
 
@@ -117,35 +192,41 @@ async function getUploadedSongs(
 
 
 
-// Get songs page
+// Get songs
 export async function getSongs(
-  params:{
-    genre?:string
-    limit?:number
-    offset?:number
-  }={}
-):Promise<ExternalMusic[]> {
+  params: {
+    genre?: string
+    limit?: number
+    offset?: number
+  } = {}
+): Promise<ExternalMusic[]> {
 
 
   const {
+
     genre,
+
     limit = 30
+
   } = params
+
 
 
   let songs =
     await getUploadedSongs(limit)
 
 
-  if(genre){
+
+  if (genre) {
 
     songs =
       songs.filter(
-        song =>
+        (song) =>
           song.genre === genre
       )
 
   }
+
 
 
   return songs
@@ -154,10 +235,11 @@ export async function getSongs(
 
 
 
-// Trending songs
+// Trending
 export async function getTrendingSongs(
   limit = 20
-):Promise<ExternalMusic[]>{
+): Promise<ExternalMusic[]> {
+
 
   return getUploadedSongs(limit)
 
@@ -168,7 +250,8 @@ export async function getTrendingSongs(
 // New releases
 export async function getNewReleases(
   limit = 20
-):Promise<ExternalMusic[]>{
+): Promise<ExternalMusic[]> {
+
 
   return getUploadedSongs(limit)
 
@@ -176,42 +259,53 @@ export async function getNewReleases(
 
 
 
-// Search songs
+// Search music
 export async function searchMusic(
- query:string,
- limit=30
-):Promise<ExternalMusic[]>{
+  query: string,
+  limit = 30
+): Promise<ExternalMusic[]> {
 
 
- const {data,error}=await supabase
-  .from('songs')
-  .select('*')
-  .eq(
-    'published',
-    true
-  )
-  .or(
-    `title.ilike.%${query}%,genre.ilike.%${query}%`
-  )
-  .limit(limit)
+  const {
+    data,
+    error
+  } = await supabase
+
+    .from('songs')
+
+    .select('*')
+
+    .eq(
+      'published',
+      true
+    )
+
+    .or(
+      `title.ilike.%${query}%,genre.ilike.%${query}%`
+    )
+
+    .limit(limit)
 
 
- if(error){
 
-  console.error(
-   'SEARCH ERROR:',
-   error
-  )
+  if (error) {
 
-  return []
+    console.error(
+      'SEARCH ERROR:',
+      error
+    )
 
- }
+    return []
+
+  }
 
 
- return (data || [])
-  .map((song:any)=>
-    songToExternalMusic(song)
-  )
+
+  return (data || [])
+    .map(
+      (song) =>
+        songToExternalMusic(song)
+    )
 
 }
 
@@ -219,46 +313,58 @@ export async function searchMusic(
 
 // Albums
 export async function getAlbums(
- limit=20
-):Promise<
+  limit = 20
+): Promise<
 {
- id:string
- name:string
- artist:string
- cover:string|null
+  id: string
+  name: string
+  artist: string
+  cover: string | null
 }[]
->{
+> {
 
 
- const {data,error}=await supabase
-  .from('albums')
-  .select('*')
-  .limit(limit)
+  const {
+    data,
+    error
+  } = await supabase
+
+    .from('albums')
+
+    .select('*')
+
+    .limit(limit)
 
 
- if(error || !data)
-  return []
+
+  if (error || !data) {
+
+    return []
+
+  }
 
 
- return data.map((album:any)=>({
 
-  id:album.id,
+  return data.map(
+    (album) => ({
 
-  name:
-   album.title ||
-   album.name ||
-   'Album',
+      id: album.id,
 
-  artist:
-   album.artist_display_name ||
-   'Artist',
+      name:
+        album.title ||
+        album.name ||
+        'Album',
 
-  cover:
-   album.cover_url ||
-   null
+      artist:
+        album.artist_display_name ||
+        'Artist',
 
- }))
+      cover:
+        album.cover_url ||
+        null
 
+    })
+  )
 
 }
 
@@ -266,44 +372,56 @@ export async function getAlbums(
 
 // Artists
 export async function getArtists(
- limit=20
-):Promise<
+  limit = 20
+): Promise<
 {
- id:string
- name:string
- cover:string|null
- website:string|null
+  id: string
+  name: string
+  cover: string | null
+  website: string | null
 }[]
->{
+> {
 
 
- const {data,error}=await supabase
-  .from('profiles')
-  .select('*')
-  .limit(limit)
+  const {
+    data,
+    error
+  } = await supabase
+
+    .from('profiles')
+
+    .select('*')
+
+    .limit(limit)
 
 
- if(error || !data)
-  return []
+
+  if (error || !data) {
+
+    return []
+
+  }
 
 
- return data.map((artist:any)=>({
 
-  id:artist.id,
+  return data.map(
+    (artist) => ({
 
-  name:
-   artist.full_name ||
-   artist.username ||
-   'Artist',
+      id: artist.id,
 
-  cover:
-   artist.avatar_url ||
-   null,
+      name:
+        artist.full_name ||
+        artist.username ||
+        'Artist',
 
-  website:null
+      cover:
+        artist.avatar_url ||
+        null,
 
- }))
+      website: null
 
+    })
+  )
 
 }
 
@@ -311,42 +429,42 @@ export async function getArtists(
 
 // Convert external music
 export function mapExternalMusic(
- data:any
-):ExternalMusic{
+  data: any
+): ExternalMusic {
 
 
- return {
+  return {
 
-  id:data.id,
+    id: data.id,
 
-  external_id:data.id,
+    external_id: data.id,
 
-  title:data.title,
+    title: data.title,
 
-  artist:data.artist,
+    artist: data.artist,
 
-  album:data.album,
+    album: data.album,
 
-  cover:data.cover,
+    cover: data.cover,
 
-  audio_url:data.audio_url,
+    audio_url: data.audio_url,
 
-  genre:data.genre,
+    genre: data.genre,
 
-  source:data.source,
+    source: data.source,
 
-  duration:data.duration,
+    duration: data.duration,
 
-  is_premium:data.is_premium,
+    is_premium: data.is_premium,
 
-  price:data.price,
+    price: data.price,
 
-  plays:data.plays || 0,
+    plays: data.plays || 0,
 
-  downloads:data.downloads || 0,
+    downloads: data.downloads || 0,
 
-  created_at:data.created_at
+    created_at: data.created_at
 
- }
+  }
 
 }
