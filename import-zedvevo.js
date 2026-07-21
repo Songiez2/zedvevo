@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import fs from 'fs'
 
 const supabaseUrl = "https://hhzezihvwascxqyxuvmd.supabase.co"
-const supabaseKey = "REMOVED_SECRETULx7TG7UrmPowfJ3v4vvmQ_tty11YbT"
+const supabaseKey = const supabaseKey = process.env.SUPABASE_SERVICE_KEY
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
