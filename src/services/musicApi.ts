@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { ExternalMusic, Song } from '@/types/types'
 
+
 // Convert database Song to ExternalMusic format
 export function songToExternalMusic(
   s: Song & {
@@ -21,6 +22,7 @@ export function songToExternalMusic(
       s.artist?.full_name ||
       s.artist?.username ||
       'Artist',
+
     album: null,
     cover: s.cover_url,
     audio_url: s.audio_url,
@@ -29,51 +31,101 @@ export function songToExternalMusic(
     duration: s.duration,
     is_premium: s.is_premium,
     price: s.price,
-    plays: s.plays,
-    downloads: s.downloads,
+    plays: s.plays || 0,
+    downloads: s.downloads || 0,
     created_at: s.created_at,
   }
 }
 
 
-// Get ZedVevo uploaded songs
-async function getUploadedSongs(limit: number): Promise<ExternalMusic[]> {
+// Get uploaded ZedVevo songs
+async function getUploadedSongs(
+  limit: number
+): Promise<ExternalMusic[]> {
+
   const { data, error } = await supabase
     .from('songs')
-    .select(`
-      *,
-      artist:profiles (
-        id,
-        username,
-        full_name,
-        avatar_url
-      )
-    `)
+    .select('*')
     .eq('published', true)
-    .order('created_at', { ascending: false })
+    .order('created_at', {
+      ascending: false
+    })
     .limit(limit)
 
+
   if (error) {
-    console.error('Songs loading error:', error)
+    console.error(
+      'SONGS ERROR:',
+      error
+    )
     return []
   }
 
-  if (!Array.isArray(data)) return []
 
-  return data.map((song: any) =>
-    songToExternalMusic(song)
-  )
+  if (!data || data.length === 0) {
+    return []
+  }
+
+
+  // Get artist names separately
+  const artistIds = [
+    ...new Set(
+      data
+        .map(song => song.artist_id)
+        .filter(Boolean)
+    )
+  ]
+
+
+  let artists:any[] = []
+
+
+  if (artistIds.length) {
+
+    const { data: artistData } =
+      await supabase
+        .from('profiles')
+        .select(
+          'id,username,full_name,avatar_url'
+        )
+        .in(
+          'id',
+          artistIds
+        )
+
+
+    artists = artistData || []
+  }
+
+
+  return data.map((song:any)=>{
+
+    const artist =
+      artists.find(
+        a => a.id === song.artist_id
+      )
+
+
+    return songToExternalMusic({
+      ...song,
+      artist
+    })
+
+  })
+
 }
 
 
-// Get all songs
+
+// Get songs page
 export async function getSongs(
-  params: {
-    genre?: string
-    limit?: number
-    offset?: number
-  } = {}
-): Promise<ExternalMusic[]> {
+  params:{
+    genre?:string
+    limit?:number
+    offset?:number
+  }={}
+):Promise<ExternalMusic[]> {
+
 
   const {
     genre,
@@ -81,119 +133,141 @@ export async function getSongs(
   } = params
 
 
-  let songs = await getUploadedSongs(limit)
+  let songs =
+    await getUploadedSongs(limit)
 
 
-  if (genre) {
-    songs = songs.filter(
-      song => song.genre === genre
-    )
+  if(genre){
+
+    songs =
+      songs.filter(
+        song =>
+          song.genre === genre
+      )
+
   }
 
 
   return songs
+
 }
+
 
 
 // Trending songs
 export async function getTrendingSongs(
   limit = 20
-): Promise<ExternalMusic[]> {
+):Promise<ExternalMusic[]>{
 
   return getUploadedSongs(limit)
 
 }
+
 
 
 // New releases
 export async function getNewReleases(
   limit = 20
-): Promise<ExternalMusic[]> {
+):Promise<ExternalMusic[]>{
 
   return getUploadedSongs(limit)
 
 }
 
 
-// Search music
+
+// Search songs
 export async function searchMusic(
-  query: string,
-  limit = 30
-): Promise<ExternalMusic[]> {
-
-  const { data, error } = await supabase
-    .from('songs')
-    .select(`
-      *,
-      artist:profiles (
-        id,
-        username,
-        full_name,
-        avatar_url
-      )
-    `)
-    .eq('published', true)
-    .or(
-      `title.ilike.%${query}%,genre.ilike.%${query}%`
-    )
-    .limit(limit)
+ query:string,
+ limit=30
+):Promise<ExternalMusic[]>{
 
 
-  if (error) {
-    console.error('Search error:', error)
-    return []
-  }
+ const {data,error}=await supabase
+  .from('songs')
+  .select('*')
+  .eq(
+    'published',
+    true
+  )
+  .or(
+    `title.ilike.%${query}%,genre.ilike.%${query}%`
+  )
+  .limit(limit)
 
 
-  return (data || []).map((song:any)=>
+ if(error){
+
+  console.error(
+   'SEARCH ERROR:',
+   error
+  )
+
+  return []
+
+ }
+
+
+ return (data || [])
+  .map((song:any)=>
     songToExternalMusic(song)
   )
+
 }
 
 
-// Albums placeholder
+
+// Albums
 export async function getAlbums(
-  limit = 20
-): Promise<
+ limit=20
+):Promise<
 {
-  id:string
-  name:string
-  artist:string
-  cover:string|null
+ id:string
+ name:string
+ artist:string
+ cover:string|null
 }[]
-> {
-
-  const { data } = await supabase
-    .from('albums')
-    .select(`
-      *,
-      artist:profiles(
-        full_name,
-        username
-      )
-    `)
-    .limit(limit)
+>{
 
 
-  if (!data) return []
+ const {data,error}=await supabase
+  .from('albums')
+  .select('*')
+  .limit(limit)
 
 
-  return data.map((album:any)=>({
-    id: album.id,
-    name: album.title || album.name,
-    artist:
-      album.artist?.full_name ||
-      album.artist?.username ||
-      'Artist',
-    cover: album.cover_url || null
-  }))
+ if(error || !data)
+  return []
+
+
+ return data.map((album:any)=>({
+
+  id:album.id,
+
+  name:
+   album.title ||
+   album.name ||
+   'Album',
+
+  artist:
+   album.artist_display_name ||
+   'Artist',
+
+  cover:
+   album.cover_url ||
+   null
+
+ }))
+
+
 }
+
 
 
 // Artists
 export async function getArtists(
-  limit = 20
-): Promise<
+ limit=20
+):Promise<
 {
  id:string
  name:string
@@ -202,47 +276,77 @@ export async function getArtists(
 }[]
 >{
 
- const {data}=await supabase
+
+ const {data,error}=await supabase
   .from('profiles')
   .select('*')
   .limit(limit)
 
 
- if(!data) return []
+ if(error || !data)
+  return []
 
 
  return data.map((artist:any)=>({
+
   id:artist.id,
+
   name:
    artist.full_name ||
    artist.username ||
    'Artist',
-  cover:artist.avatar_url || null,
+
+  cover:
+   artist.avatar_url ||
+   null,
+
   website:null
+
  }))
+
+
 }
 
 
-// Convert external music helper
+
+// Convert external music
 export function mapExternalMusic(
  data:any
 ):ExternalMusic{
 
+
  return {
+
   id:data.id,
+
   external_id:data.id,
+
   title:data.title,
+
   artist:data.artist,
+
   album:data.album,
+
   cover:data.cover,
+
   audio_url:data.audio_url,
+
   genre:data.genre,
+
   source:data.source,
+
   duration:data.duration,
+
   is_premium:data.is_premium,
+
   price:data.price,
+
   plays:data.plays || 0,
+
   downloads:data.downloads || 0,
+
   created_at:data.created_at
+
  }
+
 }
