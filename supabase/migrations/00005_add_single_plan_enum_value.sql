@@ -1,0 +1,1 @@
+ALTER TYPE artist_plan_type ADD VALUE IF NOT EXISTS 'single';
