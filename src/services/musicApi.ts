@@ -1,470 +1,146 @@
-import { supabase } from '@/lib/supabase'
-import { ExternalMusic, Song } from '@/types/types'
+import { supabase } from "@/lib/supabase";
+import type { ExternalMusic } from "@/types/types";
+
+export async function getSongs(options?: {
+  genre?: string;
+  limit?: number;
+}) {
+
+  let query = supabase
+    .from("songs")
+    .select("*")
+    .eq("published", true)
+    .order("created_at", { ascending:false });
 
 
-// Convert database Song to ExternalMusic format
-export function songToExternalMusic(
-  s: Song & {
-    artist?: {
-      id?: string
-      username?: string | null
-      full_name?: string | null
-      avatar_url?: string | null
-    }
-  }
-): ExternalMusic {
-
-  return {
-    id: s.id,
-    external_id: s.id,
-
-    title: s.title,
-
-    artist:
-      s.artist_display_name ||
-      s.artist?.full_name ||
-      s.artist?.username ||
-      'Artist',
-
-    album: null,
-
-    cover: s.cover_url,
-
-    audio_url: s.audio_url,
-
-    genre: s.genre,
-
-    source: 'upload',
-
-    duration: s.duration,
-
-    is_premium: s.is_premium,
-
-    price: s.price,
-
-    plays: s.plays || 0,
-
-    downloads: s.downloads || 0,
-
-    created_at: s.created_at,
-  }
-}
-
-
-
-// Get uploaded ZedVevo songs
-async function getUploadedSongs(
-  limit: number
-): Promise<ExternalMusic[]> {
-
-
-  const {
-    data,
-    error
-  } = await supabase
-
-    .from('songs')
-
-    .select('*')
-
-    .eq(
-      'published',
-      true
-    )
-
-    .order(
-      'created_at',
-      {
-        ascending: false
-      }
-    )
-
-    .limit(limit)
-
-
-
-  if (error) {
-
-    console.error(
-      'SONGS ERROR:',
-      error
-    )
-
-    return []
-
+  if(options?.genre){
+    query = query.eq("genre", options.genre);
   }
 
 
-
-  if (!data || data.length === 0) {
-
-    console.log(
-      'NO SONGS FOUND'
-    )
-
-    return []
-
+  if(options?.limit){
+    query = query.limit(options.limit);
   }
 
 
-
-  const artistIds = [
-    ...new Set(
-      data
-        .map(song => song.artist_id)
-        .filter(Boolean)
-    )
-  ]
+  const {data,error}=await query;
 
 
-
-  let artists: {
-    id: string
-    username: string | null
-    full_name: string | null
-    avatar_url: string | null
-  }[] = []
-
-
-
-  if (artistIds.length > 0) {
-
-
-    const {
-      data: artistData,
-      error: artistError
-    } = await supabase
-
-      .from('profiles')
-
-      .select(
-        'id,username,full_name,avatar_url'
-      )
-
-      .in(
-        'id',
-        artistIds
-      )
-
-
-
-    if (artistError) {
-
-      console.error(
-        'ARTISTS ERROR:',
-        artistError
-      )
-
-    }
-
-
-
-    artists =
-      artistData || []
-
+  if(error){
+    console.error(error);
+    return [];
   }
 
 
-
-  return data.map((song) => {
-
-
-    const artist =
-      artists.find(
-        (a) =>
-          a.id === song.artist_id
-      )
-
-
-
-    return songToExternalMusic({
-
-      ...song,
-
-      artist
-
-    })
-
-
-  })
+  return data.map(songToExternalMusic);
 
 }
 
 
 
-// Get songs
-export async function getSongs(
-  params: {
-    genre?: string
-    limit?: number
-    offset?: number
-  } = {}
-): Promise<ExternalMusic[]> {
+export async function getTrendingSongs(limit=12){
+
+ const {data,error}=await supabase
+ .from("songs")
+ .select("*")
+ .eq("published",true)
+ .order("plays",{ascending:false})
+ .limit(limit);
 
 
-  const {
-
-    genre,
-
-    limit = 30
-
-  } = params
+ if(error){
+   console.error(error);
+   return [];
+ }
 
 
-
-  let songs =
-    await getUploadedSongs(limit)
-
-
-
-  if (genre) {
-
-    songs =
-      songs.filter(
-        (song) =>
-          song.genre === genre
-      )
-
-  }
-
-
-
-  return songs
+ return data.map(songToExternalMusic);
 
 }
 
 
 
-// Trending
-export async function getTrendingSongs(
-  limit = 20
-): Promise<ExternalMusic[]> {
+export async function getNewReleases(limit=12){
+
+ const {data,error}=await supabase
+ .from("songs")
+ .select("*")
+ .eq("published",true)
+ .order("created_at",{ascending:false})
+ .limit(limit);
 
 
-  return getUploadedSongs(limit)
-
-}
-
-
-
-// New releases
-export async function getNewReleases(
-  limit = 20
-): Promise<ExternalMusic[]> {
+ if(error){
+   console.error(error);
+   return [];
+ }
 
 
-  return getUploadedSongs(limit)
+ return data.map(songToExternalMusic);
 
 }
 
 
 
-// Search music
-export async function searchMusic(
-  query: string,
-  limit = 30
-): Promise<ExternalMusic[]> {
+export function songToExternalMusic(song:any):ExternalMusic{
 
+ return {
 
-  const {
-    data,
-    error
-  } = await supabase
+   id:song.id,
 
-    .from('songs')
+   external_id:song.id,
 
-    .select('*')
+   title:song.title,
 
-    .eq(
-      'published',
-      true
-    )
+   artist:
+   song.artist_display_name ||
+   song.artist ||
+   "Unknown Artist",
 
-    .or(
-      `title.ilike.%${query}%,genre.ilike.%${query}%`
-    )
 
-    .limit(limit)
+   album:
+   song.album_id || null,
 
 
+   cover:
+   song.cover_url || null,
 
-  if (error) {
 
-    console.error(
-      'SEARCH ERROR:',
-      error
-    )
+   audio_url:
+   song.audio_url,
 
-    return []
 
-  }
+   genre:
+   song.genre || null,
 
 
+   source:
+   "zedvevo",
 
-  return (data || [])
-    .map(
-      (song) =>
-        songToExternalMusic(song)
-    )
 
-}
+   duration:
+   song.duration || null,
 
 
+   plays:
+   song.plays || 0,
 
-// Albums
-export async function getAlbums(
-  limit = 20
-): Promise<
-{
-  id: string
-  name: string
-  artist: string
-  cover: string | null
-}[]
-> {
 
+   downloads:
+   song.downloads || 0,
 
-  const {
-    data,
-    error
-  } = await supabase
 
-    .from('albums')
+   is_premium:
+   song.is_premium || false,
 
-    .select('*')
 
-    .limit(limit)
+   price:
+   song.price || null,
 
 
+   created_at:
+   song.created_at
 
-  if (error || !data) {
-
-    return []
-
-  }
-
-
-
-  return data.map(
-    (album) => ({
-
-      id: album.id,
-
-      name:
-        album.title ||
-        album.name ||
-        'Album',
-
-      artist:
-        album.artist_display_name ||
-        'Artist',
-
-      cover:
-        album.cover_url ||
-        null
-
-    })
-  )
-
-}
-
-
-
-// Artists
-export async function getArtists(
-  limit = 20
-): Promise<
-{
-  id: string
-  name: string
-  cover: string | null
-  website: string | null
-}[]
-> {
-
-
-  const {
-    data,
-    error
-  } = await supabase
-
-    .from('profiles')
-
-    .select('*')
-
-    .limit(limit)
-
-
-
-  if (error || !data) {
-
-    return []
-
-  }
-
-
-
-  return data.map(
-    (artist) => ({
-
-      id: artist.id,
-
-      name:
-        artist.full_name ||
-        artist.username ||
-        'Artist',
-
-      cover:
-        artist.avatar_url ||
-        null,
-
-      website: null
-
-    })
-  )
-
-}
-
-
-
-// Convert external music
-export function mapExternalMusic(
-  data: any
-): ExternalMusic {
-
-
-  return {
-
-    id: data.id,
-
-    external_id: data.id,
-
-    title: data.title,
-
-    artist: data.artist,
-
-    album: data.album,
-
-    cover: data.cover,
-
-    audio_url: data.audio_url,
-
-    genre: data.genre,
-
-    source: data.source,
-
-    duration: data.duration,
-
-    is_premium: data.is_premium,
-
-    price: data.price,
-
-    plays: data.plays || 0,
-
-    downloads: data.downloads || 0,
-
-    created_at: data.created_at
-
-  }
+ };
 
 }
