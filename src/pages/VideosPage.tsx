@@ -1,91 +1,121 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Play, Clock, Search } from 'lucide-react'
-import { useVideos } from '@/hooks'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { formatDuration, formatNumber } from '@/utils'
+import { useState, useEffect } from 'react';
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { Video } from '@/types/index';
+import { getVideos } from '@/lib/api';
+import VideoCard from '@/components/video/VideoCard';
+import VideoPlayer from '@/components/video/VideoPlayer';
+import BackToHome from '@/components/common/BackToHome';
+
+const GENRES = ['All', 'Music Video', 'Live', 'Lyric', 'Behind the Scenes', 'Documentary'];
 
 export default function VideosPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const { data: videos, isLoading } = useVideos()
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [genre, setGenre] = useState('All');
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
-  const filteredVideos = videos?.filter(
-    (video) =>
-      video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      video.artist?.stage_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const LIMIT = 20;
+
+  const load = async (reset = false) => {
+    setLoading(true);
+    try {
+      const data = await getVideos({ status: 'approved', limit: LIMIT, offset: reset ? 0 : offset });
+      setVideos(prev => reset ? data : [...prev, ...data]);
+      setHasMore(data.length === LIMIT);
+      if (!reset) setOffset(prev => prev + LIMIT);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { setOffset(0); load(true); }, []);
+
+  const filtered = videos.filter(v => {
+    const matchSearch = !search || v.title.toLowerCase().includes(search.toLowerCase()) || v.artist_name.toLowerCase().includes(search.toLowerCase());
+    const matchGenre = genre === 'All' || v.genre === genre;
+    return matchSearch && matchGenre;
+  });
 
   return (
-    <div className="min-h-screen">
-      <div className="bg-gradient-to-b from-electric-blue/10 to-transparent py-12">
-        <div className="container px-4">
-          <h1 className="text-4xl font-bold text-white mb-2">Videos</h1>
-          <p className="text-gray-400">Watch music videos and live sessions</p>
-        </div>
-      </div>
-
-      <div className="container px-4 py-8">
-        <div className="mb-8">
-          <Input
-            placeholder="Search videos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            leftIcon={<Search className="h-4 w-4" />}
-          />
+    <div className="min-h-screen pt-20 pb-24 lg:pb-6">
+      <div className="max-w-7xl mx-auto px-4">
+        <BackToHome />
+        <div className="py-6 border-b border-border mb-6">
+          <h1 className="text-2xl font-bold mb-1">Videos</h1>
+          <p className="text-sm text-muted-foreground">Watch Zambian music videos</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {isLoading ? (
-            Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-80" />)
-          ) : (
-            filteredVideos?.map((video, index) => (
-              <motion.div
-                key={video.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+        {/* Inline YouTube-style player */}
+        {currentVideo && (
+          <div className="mb-8 rounded-xl overflow-hidden border border-border shadow-lg">
+            <VideoPlayer
+              video={currentVideo}
+              onClose={() => setCurrentVideo(null)}
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col md:flex-row gap-3 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search videos, artists..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2 overflow-x-auto scroll-row pb-1">
+            {GENRES.map(g => (
+              <button
+                key={g}
+                onClick={() => setGenre(g)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  genre === g
+                    ? 'bg-accent text-accent-foreground border-accent'
+                    : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground'
+                }`}
               >
-                <Link to={`/video/${video.slug}`}>
-                  <Card className="group cursor-pointer overflow-hidden">
-                    <div className="relative aspect-video overflow-hidden">
-                      <img
-                        src={video.thumbnail_url || '/placeholder-video.jpg'}
-                        alt={video.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <div className="h-16 w-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
-                          <Play className="h-8 w-8 text-white ml-1" />
-                        </div>
-                      </div>
-                      <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-xs text-white">
-                        {formatDuration(video.duration)}
-                      </div>
-                      {video.access === 'premium' && (
-                        <Badge variant="premium" className="absolute top-2 left-2">
-                          Premium
-                        </Badge>
-                      )}
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold text-white mb-2 line-clamp-2">{video.title}</h3>
-                      <div className="flex items-center justify-between text-sm text-gray-400">
-                        <span>{video.artist?.stage_name || 'Unknown Artist'}</span>
-                        <span>{formatNumber(video.view_count)} views</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </motion.div>
-            ))
-          )}
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {loading && videos.length === 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-video rounded-lg" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20 text-muted-foreground">
+            <p className="text-sm">No videos found.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filtered.map(video => (
+              <VideoCard
+                key={video.id}
+                video={video}
+                onPlay={v => { setCurrentVideo(v); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                active={currentVideo?.id === video.id}
+              />
+            ))}
+          </div>
+        )}
+
+        {hasMore && !loading && (
+          <div className="text-center mt-8">
+            <Button variant="outline" onClick={() => load()}>Load more</Button>
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }

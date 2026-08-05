@@ -1,27 +1,18 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from '@/components/ui/toaster'
-import App from './App'
-import './index.css'
+import * as Sentry from "@sentry/react";
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import { AppWrapper } from "./components/common/PageMeta.tsx";
+import "./index.css";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60 * 1000,
-      refetchOnWindowFocus: false,
-    },
-  },
-})
+Sentry.init({
+  dsn: import.meta.env['VITE_SENTRY_DSN'] as string | undefined,
+  environment: import.meta.env.MODE,
+});
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-        <Toaster />
-      </BrowserRouter>
-    </QueryClientProvider>
-  </React.StrictMode>
-)
+createRoot(document.getElementById("root")!).render(
+  <Sentry.ErrorBoundary fallback={<p>应用发生错误，请刷新页面重试</p>}>
+    <AppWrapper>
+      <App />
+    </AppWrapper>
+  </Sentry.ErrorBoundary>
+);

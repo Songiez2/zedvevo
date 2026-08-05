@@ -1,276 +1,231 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
-import { Search, Bell, User, LogOut, Settings, UserCircle, Menu, X } from 'lucide-react'
-import { useAuthStore, useNotificationStore, useCartStore } from '@/store'
-import { cn } from '@/utils'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Avatar, UserAvatar } from '@/components/ui/avatar'
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, Music2, Video, Trophy, Upload, Library, User, LayoutDashboard, LogOut, LogIn, TrendingUp, Download, Heart } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
-import { useGlobalSearch } from '@/hooks'
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/contexts/AuthContext';
+import CDLogo from '@/components/ui/CDLogo';
+import SearchBar from '@/components/search/SearchBar';
+import NotificationBell from '@/components/notifications/NotificationBell';
+import DonationDialog from '@/components/donation/DonationDialog';
 
-export function Header() {
-  const navigate = useNavigate()
-  const { user, isAuthenticated, isAdmin, isArtist, logout } = useAuthStore()
-  const { unreadCount } = useNotificationStore()
-  const { getItemCount } = useCartStore()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+const navLinks = [
+  { to: '/', label: 'Home' },
+  { to: '/music', label: 'Music', icon: Music2 },
+  { to: '/videos', label: 'Videos', icon: Video },
+  { to: '/awards', label: 'Awards', icon: Trophy },
+  { to: '/trending', label: 'Trending', icon: TrendingUp },
+  { to: '/upload', label: 'Upload', icon: Upload },
+  { to: '/library', label: 'Library', icon: Library },
+  { to: '/downloads', label: 'Downloads', icon: Download },
+];
 
-  const { data: searchData } = useGlobalSearch(searchQuery)
-  
-  const searchResults = searchData ? [
-    ...(searchData.songs?.slice(0, 5).map(s => ({ ...s, type: 'song' })) || []),
-    ...(searchData.albums?.slice(0, 3).map(a => ({ ...a, type: 'album' })) || []),
-    ...(searchData.artists?.slice(0, 3).map(a => ({ ...a, type: 'artist' })) || []),
-    ...(searchData.videos?.slice(0, 3).map(v => ({ ...v, type: 'video' })) || []),
-  ] : []
+export default function Header() {
+  const { user, profile, signOut } = useAuth();
+  const location = useLocation();
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [donateOpen, setDonateOpen] = useState(false);
 
-  const handleLogout = async () => {
-    await logout()
-    navigate('/')
-  }
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
-  const cartItemCount = getItemCount()
+  const isActive = (to: string) => location.pathname === to;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-deep-black/95 backdrop-blur supports-[backdrop-filter]:bg-deep-black/60">
-      <div className="container flex h-16 items-center justify-between px-4">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-electric-blue to-electric">
-            <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="currentColor">
-              <polygon points="5,3 19,12 5,21" />
-            </svg>
-          </div>
-          <span className="text-xl font-bold text-white">ZedVevo</span>
-        </Link>
-
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
-          <Link to="/" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
-            Home
+    <>
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled ? 'glass shadow-card py-2' : 'bg-transparent py-4'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-4">
+          {/* Brand */}
+          <Link to="/" className="flex items-center gap-2 shrink-0">
+            <CDLogo size={40} spinning />
+            <span className="text-lg font-bold tracking-tight hidden sm:block">ZedVevo</span>
           </Link>
-          <Link to="/music" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
-            Music
-          </Link>
-          <Link to="/videos" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
-            Videos
-          </Link>
-          <Link to="/store" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
-            Store
-          </Link>
-          <Link to="/artists" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
-            Artists
-          </Link>
-        </nav>
 
-        {/* Search */}
-        <div className="hidden md:flex items-center flex-1 max-w-md mx-8">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search songs, albums, artists..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-dark-gray/50 border-border"
-            />
-            {searchResults && searchResults.length > 0 && searchQuery.length >= 2 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-dark-gray border border-border rounded-lg shadow-lg max-h-96 overflow-y-auto">
-                {searchResults.slice(0, 10).map((result) => (
-                  <Link
-                    key={`${result.type}-${result.id}`}
-                    to={
-                      result.type === 'song'
-                        ? `/music/${result.slug}`
-                        : result.type === 'album'
-                        ? `/album/${result.slug}`
-                        : result.type === 'artist'
-                        ? `/artist/${result.id}`
-                        : `/video/${result.slug}`
-                    }
-                    className="flex items-center gap-3 p-3 hover:bg-mid-gray transition-colors"
-                    onClick={() => setSearchQuery('')}
-                  >
-                    {result.image && (
-                      <img src={result.image} alt="" className="w-10 h-10 rounded object-cover" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{result.title}</p>
-                      <p className="text-xs text-gray-400 truncate">{result.subtitle}</p>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {result.type}
-                    </Badge>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Section */}
-        <div className="flex items-center gap-2">
-          {/* Search Toggle (Mobile) */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
-          >
-            <Search className="h-5 w-5" />
-          </Button>
-
-          {isAuthenticated ? (
-            <>
-              {/* Cart */}
-              {cartItemCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative"
-                  onClick={() => navigate('/cart')}
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-electric text-[10px] font-bold text-white">
-                    {cartItemCount}
-                  </span>
-                </Button>
-              )}
-
-              {/* Notifications */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative"
-                onClick={() => navigate('/notifications')}
+          {/* Desktop Nav */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {navLinks.map(({ to, label }) => (
+              <Link
+                key={to}
+                to={to}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  isActive(to)
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
               >
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </Button>
+                {label}
+              </Link>
+            ))}
+            {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
+              <Link
+                to="/admin"
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  location.pathname.startsWith('/admin')
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                Admin
+              </Link>
+            )}
+          </nav>
 
-              {/* User Menu */}
+          {/* Right side */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Search — md+ */}
+            <div className="hidden md:block">
+              <SearchBar />
+            </div>
+
+            {/* Donate — desktop label, mobile icon */}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="hidden sm:inline-flex items-center gap-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-accent"
+              onClick={() => setDonateOpen(true)}
+            >
+              <Heart className="h-3.5 w-3.5 text-destructive fill-destructive" />
+              Donate
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="sm:hidden h-9 w-9"
+              onClick={() => setDonateOpen(true)}
+            >
+              <Heart className="h-4 w-4 text-destructive fill-destructive" />
+            </Button>
+
+            {/* Notification bell */}
+            <NotificationBell />
+
+            {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                    <UserAvatar name={user?.full_name} image={user?.avatar_url} size="sm" />
+                  <Button variant="ghost" className="h-9 w-9 rounded-full p-0">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs font-semibold bg-accent text-accent-foreground">
+                        {(profile?.display_name || profile?.username || 'U')[0].toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user?.full_name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user?.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5 text-sm">
+                    <p className="font-medium truncate">{profile?.display_name || profile?.username || 'User'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
+                  </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/library')}>
-                    <Library className="mr-2 h-4 w-4" />
-                    Library
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard" className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4" />Dashboard</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/purchases')}>
-                    <ShoppingBag className="mr-2 h-4 w-4" />
-                    Purchases
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center gap-2"><User className="h-4 w-4" />Profile</Link>
                   </DropdownMenuItem>
-                  {isArtist && (
-                    <DropdownMenuItem onClick={() => navigate('/artist')}>
-                      <Mic className="mr-2 h-4 w-4" />
-                      Artist Dashboard
-                    </DropdownMenuItem>
-                  )}
-                  {isAdmin && (
-                    <DropdownMenuItem onClick={() => navigate('/admin')}>
-                      <LayoutDashboard className="mr-2 h-4 w-4" />
-                      Admin Dashboard
+                  <DropdownMenuItem asChild>
+                    <Link to="/downloads" className="flex items-center gap-2"><Download className="h-4 w-4" />My Downloads</Link>
+                  </DropdownMenuItem>
+                  {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4" />Admin</Link>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-500">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Log out
+                  <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive">
+                    <LogOut className="h-4 w-4 mr-2" />Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={() => navigate('/login')}>
-                Log in
+            ) : (
+              <Button asChild size="sm" className="hidden sm:inline-flex">
+                <Link to="/login"><LogIn className="h-4 w-4 mr-1.5" />Sign In</Link>
               </Button>
-              <Button onClick={() => navigate('/register')}>Sign up</Button>
-            </div>
-          )}
+            )}
 
-          {/* Mobile Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-        </div>
-      </div>
-
-      {/* Mobile Search */}
-      {isSearchOpen && (
-        <div className="md:hidden p-4 border-t border-border bg-dark-gray">
-          <Input
-            placeholder="Search songs, albums, artists..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
-          />
-        </div>
-      )}
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <nav className="md:hidden border-t border-border bg-dark-gray p-4">
-          <div className="flex flex-col gap-4">
-            <Link to="/" className="text-sm font-medium text-gray-300 hover:text-white">
-              Home
-            </Link>
-            <Link to="/music" className="text-sm font-medium text-gray-300 hover:text-white">
-              Music
-            </Link>
-            <Link to="/videos" className="text-sm font-medium text-gray-300 hover:text-white">
-              Videos
-            </Link>
-            <Link to="/store" className="text-sm font-medium text-gray-300 hover:text-white">
-              Store
-            </Link>
-            <Link to="/artists" className="text-sm font-medium text-gray-300 hover:text-white">
-              Artists
-            </Link>
+            {/* Mobile hamburger */}
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9">
+                  {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 bg-sidebar">
+                <div className="flex flex-col gap-1 mt-6">
+                  <div className="px-2 mb-3">
+                    <SearchBar />
+                  </div>
+                  {/* Mobile donate row */}
+                  <button
+                    type="button"
+                    onClick={() => { setMobileOpen(false); setDonateOpen(true); }}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    <Heart className="h-4 w-4 shrink-0 text-destructive fill-destructive" />
+                    Donate
+                  </button>
+                  {navLinks.map(({ to, label, icon: Icon }) => (
+                    <Link
+                      key={to}
+                      to={to}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                        isActive(to)
+                          ? 'bg-accent text-accent-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {Icon && <Icon className="h-4 w-4 shrink-0" />}
+                      {label}
+                    </Link>
+                  ))}
+                  {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
+                    >
+                      <LayoutDashboard className="h-4 w-4 shrink-0" />Admin
+                    </Link>
+                  )}
+                  {!user && (
+                    <Link
+                      to="/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium bg-accent text-accent-foreground mt-2"
+                    >
+                      <LogIn className="h-4 w-4 shrink-0" />Sign In
+                    </Link>
+                  )}
+                  {user && (
+                    <button
+                      onClick={() => { setMobileOpen(false); signOut(); }}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-destructive hover:bg-muted mt-2 text-left"
+                    >
+                      <LogOut className="h-4 w-4 shrink-0" />Sign Out
+                    </button>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
-        </nav>
-      )}
-    </header>
-  )
-}
+        </div>
+      </header>
 
-// Import missing icons
-import { Library, Mic, LayoutDashboard, ShoppingBag } from 'lucide-react'
+      <DonationDialog open={donateOpen} onClose={() => setDonateOpen(false)} />
+    </>
+  );
+}
