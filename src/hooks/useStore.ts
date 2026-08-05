@@ -1,25 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, type Merchandise, type Order, type OrderItem } from '@/lib/supabase'
+import { supabase, isConfigured, type Merchandise, type Order, type CartItem } from '@/lib/supabase'
+import { mockMerchandise } from '@/lib/mockData'
 import { useAuthStore } from '@/store/authStore'
-import { lipilaService } from '@/services'
 
-export function useMerchandise(category?: string, limit = 20) {
+export function useMerchandise(limit = 20) {
   return useQuery({
-    queryKey: ['merchandise', { category, limit }],
+    queryKey: ['merchandise', { limit }],
     queryFn: async () => {
-      let query = supabase
-        .from('merchandise')
-        .select('*, seller:profiles(*), artist:artists(*)')
-        .eq('is_active', true)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .limit(limit)
-
-      if (category) {
-        query = query.eq('category', category)
-      }
-
-      const { data, error } = await query
+      if (!isConfigured || !supabase) return mockMerchandise.slice(0, limit)
+      const { data, error } = await supabase.from('merchandise').select('*, seller:profiles(*), artist:artists(*)').eq('is_active', true).order('sold_count', { ascending: false }).limit(limit)
       if (error) throw error
       return data as Merchandise[]
     },
@@ -30,15 +19,8 @@ export function useFeaturedMerchandise(limit = 10) {
   return useQuery({
     queryKey: ['merchandise', 'featured', limit],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('merchandise')
-        .select('*, seller:profiles(*), artist:artists(*)')
-        .eq('is_active', true)
-        .eq('is_featured', true)
-        .is('deleted_at', null)
-        .order('sold_count', { ascending: false })
-        .limit(limit)
-
+      if (!isConfigured || !supabase) return mockMerchandise.slice(0, limit)
+      const { data, error } = await supabase.from('merchandise').select('*, seller:profiles(*), artist:artists(*)').eq('is_active', true).eq('is_featured', true).order('sold_count', { ascending: false }).limit(limit)
       if (error) throw error
       return data as Merchandise[]
     },
@@ -49,222 +31,62 @@ export function useMerchandiseItem(slug: string) {
   return useQuery({
     queryKey: ['merchandise', slug],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('merchandise')
-        .select('*, seller:profiles(*), artist:artists(*)')
-        .eq('slug', slug)
-        .single()
-
+      if (!isConfigured || !supabase) return mockMerchandise[0]
+      const { data, error } = await supabase.from('merchandise').select('*, seller:profiles(*), artist:artists(*)').eq('slug', slug).single()
       if (error) throw error
       return data as Merchandise
     },
+    enabled: !!slug,
   })
 }
 
-export function useSellerMerchandise(sellerId: string) {
+export function useCart() {
+  const user = useAuthStore((state) => state.user)
   return useQuery({
-    queryKey: ['merchandise', 'seller', sellerId],
+    queryKey: ['cart', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('merchandise')
-        .select('*')
-        .eq('seller_id', sellerId)
-        .order('created_at', { ascending: false })
-
+      if (!user || !supabase) return []
+      const { data, error } = await supabase.from('cart_items').select('*, merchandise:merchandise(*)').eq('user_id', user.id)
       if (error) throw error
-      return data as Merchandise[]
+      return data as (CartItem & { merchandise: Merchandise })[]
     },
   })
 }
 
-export function useCreateMerchandise() {
+export function useAddToCart() {
   const queryClient = useQueryClient()
   const user = useAuthStore((state) => state.user)
-
   return useMutation({
-    mutationFn: async (merchandise: Partial<Merchandise>) => {
-      if (!user) throw new Error('Not authenticated')
-
-      const { data, error } = await supabase
-        .from('merchandise')
-        .insert({ ...merchandise, seller_id: user.id })
-        .select()
-        .single()
-
+    mutationFn: async ({ merchandiseId, quantity = 1, size, color }: { merchandiseId: string; quantity?: number; size?: string; color?: string }) => {
+      if (!user || !supabase) throw new Error('Not authenticated')
+      const { error } = await supabase.from('cart_items').insert({ user_id: user.id, merchandise_id: merchandiseId, quantity, size, color })
       if (error) throw error
-      return data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['merchandise'] })
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['cart'] }) },
   })
 }
 
-export function useUpdateMerchandise() {
+export function useRemoveFromCart() {
   const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Merchandise> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('merchandise')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['merchandise'] })
-    },
-  })
-}
-
-export function useDeleteMerchandise() {
-  const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('merchandise')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
-
+      if (!supabase) throw new Error('Supabase not configured')
+      const { error } = await supabase.from('cart_items').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['merchandise'] })
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['cart'] }) },
   })
 }
 
-// Orders
 export function useOrders() {
   const user = useAuthStore((state) => state.user)
-
   return useQuery({
     queryKey: ['orders', user?.id],
     queryFn: async () => {
-      if (!user) return []
-
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*, items:order_items(*, merchandise:merchandise(*))')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
+      if (!user || !supabase) return []
+      const { data, error } = await supabase.from('orders').select('*, items:order_items(*, merchandise:merchandise(*))').eq('user_id', user.id).order('created_at', { ascending: false })
       if (error) throw error
-      return data as (Order & { items: OrderItem[] })[]
-    },
-  })
-}
-
-export function useOrder(orderId: string) {
-  return useQuery({
-    queryKey: ['order', orderId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*, items:order_items(*, merchandise:merchandise(*))')
-        .eq('id', orderId)
-        .single()
-
-      if (error) throw error
-      return data as Order & { items: OrderItem[] }
-    },
-  })
-}
-
-export function useCreateOrder() {
-  const queryClient = useQueryClient()
-  const user = useAuthStore((state) => state.user)
-
-  return useMutation({
-    mutationFn: async ({
-      items,
-      shippingAddress,
-      notes,
-    }: {
-      items: { merchandise_id: string; quantity: number; size?: string; color?: string }[]
-      shippingAddress: Record<string, string>
-      notes?: string
-    }) => {
-      if (!user) throw new Error('Not authenticated')
-
-      // Get merchandise details for price calculation
-      const merchandiseIds = items.map((i) => i.merchandise_id)
-      const { data: merchandiseItems } = await supabase
-        .from('merchandise')
-        .select('id, price')
-        .in('id', merchandiseIds)
-
-      if (!merchandiseItems) throw new Error('Could not fetch merchandise')
-
-      const subtotal = items.reduce((sum, item) => {
-        const merch = merchandiseItems.find((m) => m.id === item.merchandise_id)
-        return sum + (merch?.price || 0) * item.quantity
-      }, 0)
-
-      const shippingFee = subtotal >= 500 ? 0 : 50
-      const total = subtotal + shippingFee
-
-      // Create order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user.id,
-          subtotal,
-          shipping_fee: shippingFee,
-          total,
-          shipping_address: shippingAddress,
-          notes,
-          status: 'pending',
-        })
-        .select()
-        .single()
-
-      if (orderError) throw orderError
-
-      // Create order items
-      const orderItems = items.map((item) => {
-        const merch = merchandiseItems.find((m) => m.id === item.merchandise_id)
-        return {
-          order_id: order.id,
-          merchandise_id: item.merchandise_id,
-          quantity: item.quantity,
-          unit_price: merch?.price || 0,
-          total_price: (merch?.price || 0) * item.quantity,
-          size: item.size,
-          color: item.color,
-        }
-      })
-
-      const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
-      if (itemsError) throw itemsError
-
-      return order
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] })
-    },
-  })
-}
-
-export function useCheckout() {
-  return useMutation({
-    mutationFn: async (orderId: string) => {
-      // Get order details
-      const { data: order } = await supabase
-        .from('orders')
-        .select('*, items:order_items(*, merchandise:merchandise(*))')
-        .eq('id', orderId)
-        .single()
-
-      if (!order) throw new Error('Order not found')
-
-      // For now, return success as the payment flow is handled separately
-      return { success: true, paymentId: undefined }
+      return data as Order[]
     },
   })
 }

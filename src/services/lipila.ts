@@ -39,12 +39,37 @@ interface LipilaVerificationResponse {
 export function detectNetwork(phone: string): 'mtn' | 'airtel' | null {
   const cleanPhone = phone.replace(/\D/g, '')
   // Zambia phone number patterns
-  // MTN: 076, 095, 096
+  // MTN: 076, 095, 096 (also 097 for MTN)
   // Airtel: 077, 078, 079
-  if (cleanPhone.startsWith('26076') || cleanPhone.startsWith('26095') || cleanPhone.startsWith('26096')) {
+  // Accept formats: 097xxxxxx, 77xxxxxx, 26097xxxxxx, 26077xxxxxx, etc.
+  
+  if (
+    cleanPhone.startsWith('26076') || 
+    cleanPhone.startsWith('26095') || 
+    cleanPhone.startsWith('26096') ||
+    cleanPhone.startsWith('26097') ||
+    cleanPhone.startsWith('076') || 
+    cleanPhone.startsWith('095') || 
+    cleanPhone.startsWith('096') ||
+    cleanPhone.startsWith('097') ||
+    cleanPhone.startsWith('76') ||
+    cleanPhone.startsWith('95') ||
+    cleanPhone.startsWith('96') ||
+    cleanPhone.startsWith('97')
+  ) {
     return 'mtn'
   }
-  if (cleanPhone.startsWith('26077') || cleanPhone.startsWith('26078') || cleanPhone.startsWith('26079')) {
+  if (
+    cleanPhone.startsWith('26077') || 
+    cleanPhone.startsWith('26078') || 
+    cleanPhone.startsWith('26079') ||
+    cleanPhone.startsWith('077') || 
+    cleanPhone.startsWith('078') || 
+    cleanPhone.startsWith('079') ||
+    cleanPhone.startsWith('77') ||
+    cleanPhone.startsWith('78') ||
+    cleanPhone.startsWith('79')
+  ) {
     return 'airtel'
   }
   return null
@@ -68,7 +93,7 @@ export const lipilaService = {
     if (!network) {
       return { 
         success: false, 
-        error: 'Invalid phone number. Please use a valid MTN (076, 095, 096) or Airtel (077, 078, 079) number.' 
+        error: 'Invalid phone number. Please use MTN (097, 076, 095, 096) or Airtel (077, 078, 079) number.' 
       }
     }
 
@@ -270,6 +295,10 @@ export const lipilaService = {
       console.error('Error checking payment status:', error)
       return { success: false, status: 'pending', error: 'Verification failed' }
     }
+  },
+
+  async subscribeArtist(planType: 'daily' | 'weekly' | 'annual', price: number, phoneNumber: string): Promise<LipilaPaymentResponse> {
+    return this.createMobileMoneyPayment('artist_subscription', planType, price, `Artist Plan: ${planType}`, phoneNumber)
   },
 
   async purchaseArtistPlan(planType: 'daily' | 'weekly' | 'annual', phoneNumber: string): Promise<LipilaPaymentResponse> {

@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Play, Clock, Users, TrendingUp, Disc, Calendar, ShoppingBag } from 'lucide-react'
+import { ArrowRight, Play, Clock, Users, TrendingUp, Disc, Calendar, ShoppingBag, Share2, Facebook, MessageCircle, Link as LinkIcon, Upload, Star } from 'lucide-react'
+import { useState } from 'react'
 import { useHeroSliders, useFeaturedSongs, useTrendingSongs, useFeaturedAlbums, useFeaturedArtists, useFeaturedMerchandise, useUpcomingEvents } from '@/hooks'
-import { usePlayerStore } from '@/store'
+import { usePlayerStore, useAuthStore } from '@/store'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -10,8 +11,73 @@ import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/ui/avatar'
 import { formatDuration, formatNumber, formatPrice, formatDate } from '@/utils'
 
+function ShareButton({ song }: { song: any }) {
+  const [showShare, setShowShare] = useState(false)
+  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/music/${song.slug}` : ''
+  const shareTitle = `${song.title} by ${song.artist?.stage_name || 'Unknown'} on ZedVevo`
+  const shareImage = song.cover_url || song.thumbnail_url || ''
+  
+  const copyLink = () => {
+    navigator.clipboard.writeText(shareUrl)
+    setShowShare(false)
+    // Also copy og:image meta for rich link previews
+  }
+  
+  const shareWhatsApp = () => {
+    const text = `${shareTitle}\n\n${shareUrl}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+    setShowShare(false)
+  }
+  
+  const shareFacebook = () => {
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareTitle)}`, '_blank')
+    setShowShare(false)
+  }
+  
+  const shareTwitter = () => {
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(shareUrl)}`, '_blank')
+    setShowShare(false)
+  }
+
+  return (
+    <div className="relative">
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => { e.stopPropagation(); setShowShare(!showShare) }}
+      >
+        <Share2 className="h-4 w-4" />
+      </Button>
+      {showShare && (
+        <div className="absolute right-0 top-full mt-1 z-50 bg-dark-gray border border-border rounded-lg shadow-lg p-2 min-w-[160px]">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-border mb-1">
+            {shareImage && (
+              <img src={shareImage} alt="" className="w-8 h-8 rounded object-cover" />
+            )}
+            <span className="text-xs text-gray-400 truncate max-w-[100px]">{song.title}</span>
+          </div>
+          <button onClick={copyLink} className="flex items-center gap-2 w-full px-3 py-2 hover:bg-mid-gray rounded text-sm text-white">
+            <LinkIcon className="h-4 w-4" /> Copy Link
+          </button>
+          <button onClick={shareFacebook} className="flex items-center gap-2 w-full px-3 py-2 hover:bg-mid-gray rounded text-sm text-white">
+            <Facebook className="h-4 w-4 text-blue-500" /> Facebook
+          </button>
+          <button onClick={shareWhatsApp} className="flex items-center gap-2 w-full px-3 py-2 hover:bg-mid-gray rounded text-sm text-white">
+            <MessageCircle className="h-4 w-4 text-green-500" /> WhatsApp
+          </button>
+          <button onClick={shareTwitter} className="flex items-center gap-2 w-full px-3 py-2 hover:bg-mid-gray rounded text-sm text-white">
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> X/Twitter
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function HomePage() {
   const { playSong, currentSong, isPlaying } = usePlayerStore()
+  const { isAuthenticated, isAdmin, isArtist } = useAuthStore()
   const { data: sliders, isLoading: slidersLoading } = useHeroSliders()
   const { data: featuredSongs, isLoading: songsLoading } = useFeaturedSongs(8)
   const { data: trendingSongs } = useTrendingSongs(10)
@@ -19,6 +85,9 @@ export default function HomePage() {
   const { data: featuredArtists } = useFeaturedArtists(6)
   const { data: merchandise } = useFeaturedMerchandise(4)
   const { data: events } = useUpcomingEvents(3)
+
+  // Get top streamed song for hero
+  const topSong = trendingSongs?.[0]
 
   return (
     <div className="min-h-screen">
@@ -44,14 +113,97 @@ export default function HomePage() {
                 <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
                   {sliders[0].title}
                 </h1>
-                {sliders[0].button_text && (
-                  <Link to={sliders[0].button_link || '/'}>
-                    <Button size="lg" className="mt-4">
-                      {sliders[0].button_text}
-                      <ArrowRight className="ml-2 h-5 w-5" />
+                <div className="flex gap-4">
+                  {sliders[0].button_text && (
+                    <Link to={sliders[0].button_link || '/'}>
+                      <Button size="lg" className="mt-4">
+                        {sliders[0].button_text}
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Button>
+                    </Link>
+                  )}
+                  {topSong && (
+                    <Button 
+                      size="lg" 
+                      variant="outline" 
+                      className="mt-4 bg-white/10 backdrop-blur-sm"
+                      onClick={() => playSong(topSong, trendingSongs || [])}
+                    >
+                      <Play className="mr-2 h-5 w-5" />
+                      Play Top Song
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        ) : topSong ? (
+          <div className="relative w-full h-full">
+            <img
+              src={topSong.cover_url || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200'}
+              alt={topSong.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-deep-black via-deep-black/70 to-transparent" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center max-w-2xl px-4"
+              >
+                <Badge className="mb-4 bg-electric/80">🔥 #1 Trending Now</Badge>
+                <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
+                  {topSong.title}
+                </h1>
+                <p className="text-xl text-gray-300 mb-2">
+                  {topSong.artist?.stage_name || 'Unknown Artist'}
+                </p>
+                <p className="text-gray-400 mb-6">
+                  {formatNumber(topSong.play_count)} plays • {formatDuration(topSong.duration)}
+                </p>
+                <div className="flex flex-wrap gap-4 justify-center">
+                  <Button 
+                    size="lg" 
+                    className="bg-electric hover:bg-electric/80"
+                    onClick={() => playSong(topSong, trendingSongs || [])}
+                  >
+                    <Play className="mr-2 h-5 w-5" fill="currentColor" />
+                    {currentSong?.id === topSong.id && isPlaying ? 'Pause' : 'Play Now'}
+                  </Button>
+                  <Link to="/music">
+                    <Button size="lg" variant="outline">
+                      Browse All Music
                     </Button>
                   </Link>
-                )}
+                </div>
+                <div className="flex flex-wrap gap-4 justify-center mt-6">
+                  {!isAuthenticated ? (
+                    <Link to="/login">
+                      <Button size="sm" variant="outline">
+                        <Star className="mr-2 h-4 w-4" /> Become an Artist
+                      </Button>
+                    </Link>
+                  ) : !isArtist ? (
+                    <Link to="/artist/become">
+                      <Button size="sm" variant="outline">
+                        <Star className="mr-2 h-4 w-4" /> Become an Artist
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link to="/artist/upload">
+                      <Button size="sm" variant="outline">
+                        <Upload className="mr-2 h-4 w-4" /> Upload Song
+                      </Button>
+                    </Link>
+                  )}
+                  {isAdmin && (
+                    <Link to="/admin">
+                      <Button size="sm" variant="secondary">
+                        Admin Dashboard
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </motion.div>
             </div>
           </div>
@@ -64,9 +216,37 @@ export default function HomePage() {
               <p className="text-xl text-gray-300 mb-8">
                 The best Zambian music streaming platform
               </p>
-              <Link to="/register">
-                <Button size="lg">Get Started</Button>
-              </Link>
+              <div className="flex flex-wrap gap-4 justify-center">
+                <Link to="/register">
+                  <Button size="lg">Get Started</Button>
+                </Link>
+                {!isAuthenticated ? (
+                  <Link to="/login">
+                    <Button size="lg" variant="outline">
+                      <Star className="mr-2 h-5 w-5" /> Become an Artist
+                    </Button>
+                  </Link>
+                ) : !isArtist ? (
+                  <Link to="/artist/become">
+                    <Button size="lg" variant="outline">
+                      <Star className="mr-2 h-5 w-5" /> Become an Artist
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link to="/artist/upload">
+                    <Button size="lg" variant="outline">
+                      <Upload className="mr-2 h-5 w-5" /> Upload Song
+                    </Button>
+                  </Link>
+                )}
+                {isAdmin && (
+                  <Link to="/admin">
+                    <Button size="lg" variant="secondary">
+                      Admin Dashboard
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -119,9 +299,12 @@ export default function HomePage() {
                       </div>
                       {song.access === 'premium' && (
                         <Badge variant="premium" className="absolute top-2 right-2">
-                          Premium
+                          {song.price > 0 ? `K${song.price}` : 'Premium'}
                         </Badge>
                       )}
+                      <div className="absolute top-2 left-2">
+                        <ShareButton song={song} />
+                      </div>
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-semibold text-white truncate">{song.title}</h3>
@@ -198,6 +381,7 @@ export default function HomePage() {
                     >
                       <Play className="h-5 w-5" />
                     </Button>
+                    <ShareButton song={song} />
                   </CardContent>
                 </Card>
               </motion.div>

@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Clock, User } from 'lucide-react'
-import { useSong, useArtistSongs, useFavoriteSong, useToggleFavorite } from '@/hooks'
+import { useSong, useArtistSongs, useFavoriteSong } from '@/hooks'
 import { usePlayerStore } from '@/store'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,10 +15,9 @@ export default function SongPage() {
   const { slug } = useParams<{ slug: string }>()
   const { data: song, isLoading, error } = useSong(slug!)
   const { data: relatedSongs } = useArtistSongs(song?.artist_id || '')
-  const { data: isFavorite } = useFavoriteSong(song?.id || '')
-  const toggleFavorite = useToggleFavorite()
   const { playSong, currentSong, isPlaying, setIsPlaying } = usePlayerStore()
   const { toast } = useToast()
+  const isFavorite = false
 
   const handlePlay = () => {
     if (currentSong?.id === song?.id) {
@@ -29,19 +28,11 @@ export default function SongPage() {
   }
 
   const handleFavorite = async () => {
-    if (!song) return
-    try {
-      await toggleFavorite.mutateAsync(song.id)
-      toast({
-        title: isFavorite ? 'Removed from favorites' : 'Added to favorites',
-        variant: 'default',
-      })
-    } catch {
-      toast({
-        title: 'Error updating favorites',
-        variant: 'destructive',
-      })
-    }
+    toast({
+      title: 'Demo Mode',
+      description: 'Connect Supabase to enable favorites',
+      variant: 'default',
+    })
   }
 
   const handleShare = async () => {

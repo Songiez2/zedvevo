@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { Eye, EyeOff, Mail, Lock, User, Play } from 'lucide-react'
+import { supabase, isConfigured } from '@/lib/supabase'
 import { useAuthStore } from '@/store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,7 +25,7 @@ type RegisterForm = z.infer<typeof registerSchema>
 
 export default function RegisterPage() {
   const navigate = useNavigate()
-  const { fetchUser } = useAuthStore()
+  const { fetchUser, loginDemo } = useAuthStore()
   const { toast } = useToast()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -38,7 +38,21 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
   })
 
+  const handleDemoLogin = () => {
+    loginDemo()
+    toast({ title: 'Welcome to ZedVevo Demo!' })
+    navigate('/')
+  }
+
   const onSubmit = async (data: RegisterForm) => {
+    if (!isConfigured || !supabase) {
+      toast({
+        title: 'Demo Mode',
+        description: 'Connect Supabase to enable real registration',
+        variant: 'destructive',
+      })
+      return
+    }
     setIsLoading(true)
     try {
       const { error: signUpError, data: signUpData } = await supabase.auth.signUp({
@@ -95,6 +109,15 @@ export default function RegisterPage() {
           <CardDescription>Join ZedVevo and start streaming</CardDescription>
         </CardHeader>
         <CardContent>
+          {!isConfigured && (
+            <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-sm text-yellow-200">
+              Demo Mode: Connect Supabase for real registration
+              <Button onClick={handleDemoLogin} className="w-full mt-3" variant="outline">
+                <Play className="h-4 w-4 mr-2" /> Try Demo Mode
+              </Button>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input
               label="Full Name"

@@ -26,7 +26,14 @@ export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  const { data: searchResults } = useGlobalSearch(searchQuery)
+  const { data: searchData } = useGlobalSearch(searchQuery)
+  
+  const searchResults = searchData ? [
+    ...(searchData.songs?.slice(0, 5).map(s => ({ ...s, type: 'song' })) || []),
+    ...(searchData.albums?.slice(0, 3).map(a => ({ ...a, type: 'album' })) || []),
+    ...(searchData.artists?.slice(0, 3).map(a => ({ ...a, type: 'artist' })) || []),
+    ...(searchData.videos?.slice(0, 3).map(v => ({ ...v, type: 'video' })) || []),
+  ] : []
 
   const handleLogout = async () => {
     await logout()

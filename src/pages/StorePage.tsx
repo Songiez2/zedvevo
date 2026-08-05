@@ -15,7 +15,7 @@ import { MERCHANDISE_CATEGORIES } from '@/constants'
 export default function StorePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const { data: merchandise, isLoading } = useMerchandise(selectedCategory === 'all' ? undefined : selectedCategory)
+  const { data: merchandise, isLoading } = useMerchandise(50)
 
   const filteredMerchandise = merchandise?.filter(
     (item) =>

@@ -20,7 +20,7 @@ export default function MusicPage() {
   const genreId = searchParams.get('genre') || undefined
 
   const { data: songs, isLoading: songsLoading } = useSongs(genreId)
-  const { data: albums, isLoading: albumsLoading } = useAlbums(genreId)
+  const { data: albums, isLoading: albumsLoading } = useAlbums()
   const { data: categories } = useCategories()
   const { playSong, currentSong, isPlaying, setQueue, queueIndex } = usePlayerStore()
 

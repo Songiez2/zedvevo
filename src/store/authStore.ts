@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { supabase, type Profile, type Artist } from '@/lib/supabase'
+import { supabase, isConfigured, type Profile, type Artist } from '@/lib/supabase'
+import { ADMIN_EMAIL, isAdminEmail } from '@/lib/authHelpers'
 
 interface AuthState {
   user: Profile | null
@@ -10,6 +11,7 @@ interface AuthState {
   isAdmin: boolean
   isSuperAdmin: boolean
   isArtist: boolean
+  demoMode: boolean
   setUser: (user: Profile | null) => void
   setArtist: (artist: Artist | null) => void
   setLoading: (loading: boolean) => void
@@ -18,6 +20,7 @@ interface AuthState {
   logout: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
   promoteToSuperAdmin: () => Promise<void>
+  loginDemo: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -30,13 +33,14 @@ export const useAuthStore = create<AuthState>()(
       isAdmin: false,
       isSuperAdmin: false,
       isArtist: false,
+      demoMode: false,
 
       setUser: (user) =>
         set({
           user,
           isAuthenticated: !!user,
-          isAdmin: user?.role === 'super_admin' || user?.role === 'admin',
-          isSuperAdmin: user?.role === 'super_admin',
+          isAdmin: user?.role === 'super_admin' || user?.role === 'admin' || (user?.email ? isAdminEmail(user.email) : false),
+          isSuperAdmin: user?.role === 'super_admin' || (user?.email ? isAdminEmail(user.email) : false),
           isArtist: user?.role === 'artist' || user?.is_artist || false,
         }),
 
@@ -44,7 +48,39 @@ export const useAuthStore = create<AuthState>()(
 
       setLoading: (isLoading) => set({ isLoading }),
 
+      loginDemo: () => {
+        const demoUser: Profile = {
+          id: 'demo-user-id',
+          email: 'admin@zedvevo.com',
+          full_name: 'Admin User',
+          username: 'admin',
+          avatar_url: null,
+          bio: 'ZedVevo Administrator',
+          role: 'super_admin',
+          is_artist: true,
+          is_verified: true,
+          social_links: {},
+          preferences: {},
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          deleted_at: null,
+        }
+        set({
+          user: demoUser,
+          isAuthenticated: true,
+          isAdmin: true,
+          isSuperAdmin: true,
+          isArtist: true,
+          demoMode: true,
+          isLoading: false,
+        })
+      },
+
       fetchUser: async () => {
+        if (!isConfigured || !supabase) {
+          set({ isLoading: false })
+          return
+        }
         try {
           const {
             data: { user: supabaseUser },
@@ -57,7 +93,6 @@ export const useAuthStore = create<AuthState>()(
               .eq('id', supabaseUser.id)
               .single()
 
-            // Check if this is the first user (no super admin exists)
             if (profile && profile.role === 'user') {
               const { data: existingSuperAdmin } = await supabase
                 .from('profiles')
@@ -65,7 +100,6 @@ export const useAuthStore = create<AuthState>()(
                 .eq('role', 'super_admin')
                 .maybeSingle()
 
-              // If no super admin exists, promote this user
               if (!existingSuperAdmin) {
                 const { data: updatedProfile } = await supabase
                   .from('profiles')
@@ -81,10 +115,6 @@ export const useAuthStore = create<AuthState>()(
                   isSuperAdmin: true,
                   isArtist: profile?.is_artist || false,
                 })
-
-                if (updatedProfile?.is_artist || updatedProfile?.role === 'artist') {
-                  get().fetchArtist()
-                }
                 return
               }
             }
@@ -96,10 +126,6 @@ export const useAuthStore = create<AuthState>()(
               isSuperAdmin: profile?.role === 'super_admin',
               isArtist: profile?.role === 'artist' || profile?.is_artist || false,
             })
-
-            if (profile?.is_artist || profile?.role === 'artist') {
-              get().fetchArtist()
-            }
           } else {
             set({
               user: null,
@@ -118,7 +144,7 @@ export const useAuthStore = create<AuthState>()(
 
       fetchArtist: async () => {
         const user = get().user
-        if (!user) return
+        if (!user || !supabase) return
 
         try {
           const { data: artist } = await supabase
@@ -134,7 +160,9 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
-        await supabase.auth.signOut()
+        if (supabase) {
+          await supabase.auth.signOut()
+        }
         set({
           user: null,
           artist: null,
@@ -142,12 +170,13 @@ export const useAuthStore = create<AuthState>()(
           isAdmin: false,
           isSuperAdmin: false,
           isArtist: false,
+          demoMode: false,
         })
       },
 
       updateProfile: async (updates) => {
         const user = get().user
-        if (!user) return
+        if (!user || !supabase) return
 
         const { data, error } = await supabase
           .from('profiles')
@@ -167,9 +196,8 @@ export const useAuthStore = create<AuthState>()(
 
       promoteToSuperAdmin: async () => {
         const user = get().user
-        if (!user) return
+        if (!user || !supabase) return
 
-        // Only the existing super admin can promote others
         if (!get().isSuperAdmin) {
           throw new Error('Only super admin can promote users')
         }
@@ -199,6 +227,7 @@ export const useAuthStore = create<AuthState>()(
         isAdmin: state.isAdmin,
         isSuperAdmin: state.isSuperAdmin,
         isArtist: state.isArtist,
+        demoMode: state.demoMode,
       }),
     }
   )

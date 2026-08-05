@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { Eye, EyeOff, Mail, Lock, Play } from 'lucide-react'
+import { supabase, isConfigured } from '@/lib/supabase'
 import { useAuthStore } from '@/store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,7 +20,7 @@ type LoginForm = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { fetchUser } = useAuthStore()
+  const { fetchUser, loginDemo } = useAuthStore()
   const { toast } = useToast()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -34,6 +34,14 @@ export default function LoginPage() {
   })
 
   const onSubmit = async (data: LoginForm) => {
+    if (!isConfigured || !supabase) {
+      toast({
+        title: 'Demo Mode',
+        description: 'Connect Supabase to enable real authentication',
+        variant: 'destructive',
+      })
+      return
+    }
     setIsLoading(true)
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -63,6 +71,12 @@ export default function LoginPage() {
     }
   }
 
+  const handleDemoLogin = () => {
+    loginDemo()
+    toast({ title: 'Welcome to ZedVevo Demo!' })
+    navigate('/')
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-16 bg-gradient-to-b from-electric-blue/10 to-transparent">
       <Card className="w-full max-w-md">
@@ -71,6 +85,15 @@ export default function LoginPage() {
           <CardDescription>Sign in to your ZedVevo account</CardDescription>
         </CardHeader>
         <CardContent>
+          {!isConfigured && (
+            <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-sm text-yellow-200">
+              Demo Mode: Connect Supabase for real authentication
+              <Button onClick={handleDemoLogin} className="w-full mt-3" variant="outline">
+                <Play className="h-4 w-4 mr-2" /> Try Demo Mode
+              </Button>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input
               label="Email"
