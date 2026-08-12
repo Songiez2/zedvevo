@@ -162,7 +162,7 @@ export function useArtists(limit = 20) {
       if (!isConfigured) return mockArtists.slice(0, limit)
       const { data, error } = await supabase
         .from('artists')
-        .select('*')
+        .select('*, user:profiles(*)')
         .order('monthly_listeners', { ascending: false })
         .limit(limit)
 
@@ -179,7 +179,7 @@ export function useFeaturedArtists(limit = 10) {
       if (!isConfigured) return mockArtists.filter(a => a.featured).slice(0, limit)
       const { data, error } = await supabase
         .from('artists')
-        .select('*')
+        .select('*, user:profiles(*)')
         .eq('featured', true)
         .order('monthly_listeners', { ascending: false })
         .limit(limit)
@@ -197,7 +197,7 @@ export function useArtist(id: string) {
       if (!isConfigured) return mockArtists.find(a => a.id === id) || mockArtists[0]
       const { data, error } = await supabase
         .from('artists')
-        .select('*')
+        .select('*, user:profiles(*)')
         .eq('id', id)
         .single()
 

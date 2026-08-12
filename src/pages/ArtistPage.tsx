@@ -61,14 +61,14 @@ export default function ArtistPage() {
         <title>{artist.stage_name} — ZedVevo</title>
         <meta property="og:title" content={artist.stage_name} />
         <meta property="og:description" content={artist.bio || `Listen to ${artist.stage_name} on ZedVevo — ${formatNumber(artist.total_followers)} followers`} />
-        <meta property="og:image" content={artist.cover_image_url || artist.user?.avatar_url || '/placeholder.jpg'} />
+        <meta property="og:image" content={artist.cover_image_url ? `${window.location.origin}${artist.cover_image_url}` : artist.user?.avatar_url ? `${window.location.origin}${artist.user.avatar_url}` : `${window.location.origin}/placeholder.jpg`} />
         <meta property="og:type" content="profile" />
         <meta property="og:url" content={window.location.href} />
         <meta property="profile:username" content={artist.stage_name} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={artist.stage_name} />
         <meta name="twitter:description" content={artist.bio || `Listen to ${artist.stage_name} on ZedVevo`} />
-        <meta name="twitter:image" content={artist.cover_image_url || artist.user?.avatar_url || '/placeholder.jpg'} />
+        <meta name="twitter:image" content={artist.cover_image_url ? `${window.location.origin}${artist.cover_image_url}` : artist.user?.avatar_url ? `${window.location.origin}${artist.user.avatar_url}` : `${window.location.origin}/placeholder.jpg`} />
       </Helmet>
       <div className="min-h-screen">
       {/* Header */}
