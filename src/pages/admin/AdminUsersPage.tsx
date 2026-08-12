@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, KeyRound, ShieldCheck, ShieldOff, Eye, EyeOff, Loader2, UserCog } from 'lucide-react';
+import { Search, KeyRound, ShieldCheck, ShieldOff, Eye, EyeOff, Loader2, UserCog, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
 import { getAllProfiles, updateProfile } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import { ARTIST_PLANS } from '@/constants';
 import type { Profile, UserRole } from '@/types/index';
 
 export default function AdminUsersPage() {
@@ -40,6 +41,12 @@ export default function AdminUsersPage() {
   const [roleTarget, setRoleTarget]   = useState<Profile | null>(null);
   const [newRole, setNewRole]         = useState<UserRole>('user');
   const [roleLoading, setRoleLoading] = useState(false);
+
+  // Promote artist dialog
+  const [promoteDialog, setPromoteDialog] = useState(false);
+  const [promoteTarget, setPromoteTarget] = useState<Profile | null>(null);
+  const [promotePlan, setPromotePlan] = useState<'daily' | 'weekly' | 'annual'>('weekly');
+  const [promoteLoading, setPromoteLoading] = useState(false);
 
   useEffect(() => {
     getAllProfiles()
@@ -95,9 +102,73 @@ export default function AdminUsersPage() {
     finally { setRoleLoading(false); }
   };
 
+  const openPromoteDialog = (u: Profile) => {
+    setPromoteTarget(u);
+    setPromotePlan('weekly');
+    setPromoteDialog(true);
+  };
+
+  const handlePromoteArtist = async () => {
+    if (!promoteTarget) return;
+    setPromoteLoading(true);
+    try {
+      // Update profile to artist
+      await updateProfile(promoteTarget.id, { role: 'artist', is_artist: true });
+
+      // Create artist record if not exists
+      const { data: existingArtist } = await supabase
+        .from('artists')
+        .select('id')
+        .eq('user_id', promoteTarget.id)
+        .single();
+
+      if (!existingArtist) {
+        await supabase.from('artists').insert({
+          user_id: promoteTarget.id,
+          stage_name: promoteTarget.display_name || promoteTarget.username || promoteTarget.email?.split('@')[0] || 'Artist',
+        });
+      }
+
+      // Create subscription
+      const plan = ARTIST_PLANS[promotePlan];
+      const now = new Date();
+      let endDate = new Date(now);
+      if (promotePlan === 'daily') endDate.setDate(endDate.getDate() + 1);
+      else if (promotePlan === 'weekly') endDate.setDate(endDate.getDate() + 7);
+      else endDate.setFullYear(endDate.getFullYear() + 1);
+
+      await supabase.from('artist_subscriptions').upsert({
+        user_id: promoteTarget.id,
+        plan: promotePlan,
+        status: 'active',
+        start_date: now.toISOString(),
+        end_date: endDate.toISOString(),
+        song_limit: plan.songLimit,
+        upload_count: 0,
+        price: 0,
+        currency: 'ZMW',
+      }, { onConflict: 'user_id,plan' });
+
+      // Notify user
+      await supabase.from('notifications').insert({
+        user_id: promoteTarget.id,
+        type: 'artist_activated',
+        title: 'Artist Access Granted',
+        message: `Admin has granted you ${plan.name} artist plan. You can now upload music!`,
+        data: { plan: promotePlan },
+      });
+
+      setUsers(prev => prev.map(u => u.id === promoteTarget.id ? { ...u, role: 'artist', is_artist: true } : u));
+      toast.success(`${promoteTarget.username || promoteTarget.email} is now an artist with ${plan.name} plan`);
+      setPromoteDialog(false);
+    } catch { toast.error('Failed to promote user to artist'); }
+    finally { setPromoteLoading(false); }
+  };
+
   const roleBadge = (role: string) => {
     if (role === 'super_admin') return <Badge className="text-[10px] bg-accent text-accent-foreground">Super Admin</Badge>;
     if (role === 'admin')       return <Badge className="text-[10px]">Admin</Badge>;
+    if (role === 'artist')      return <Badge variant="default" className="text-[10px] bg-electric text-white">Artist</Badge>;
     return <Badge variant="secondary" className="text-[10px]">User</Badge>;
   };
 
@@ -155,6 +226,13 @@ export default function AdminUsersPage() {
                 <td className="py-2.5 px-3 whitespace-nowrap text-muted-foreground text-xs">{formatDate(u.created_at)}</td>
                 <td className="py-2.5 px-3 whitespace-nowrap">
                   <div className="flex gap-1.5">
+                    {/* Promote to Artist — admin/super_admin can promote any non-artist user */}
+                    {u.role !== 'artist' && u.role !== 'super_admin' && (
+                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-electric border-electric hover:bg-electric/10"
+                        onClick={() => openPromoteDialog(u)}>
+                        <Mic className="h-3 w-3" /> Promote Artist
+                      </Button>
+                    )}
                     {/* Role management — super_admin only, can't change own role */}
                     {isSuperAdmin && u.id !== user?.id && (
                       <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openRoleDialog(u)}>
@@ -256,6 +334,54 @@ export default function AdminUsersPage() {
             <Button variant="outline" onClick={() => setRoleDialog(false)}>Cancel</Button>
             <Button className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handleChangeRole} disabled={roleLoading}>
               {roleLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Role
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Promote Artist Dialog */}
+      <Dialog open={promoteDialog} onOpenChange={setPromoteDialog}>
+        <DialogContent className="max-w-[calc(100%-2rem)] md:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Mic className="h-4 w-4" />Promote to Artist</DialogTitle>
+            <DialogDescription>
+              Grant artist access to <strong>{promoteTarget?.username || promoteTarget?.email}</strong> with a selected plan. They will be able to upload music immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 space-y-4">
+            <div>
+              <Label>Artist Plan</Label>
+              <Select value={promotePlan} onValueChange={v => setPromotePlan(v as 'daily' | 'weekly' | 'annual')}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">
+                    Daily — K{ARTIST_PLANS.daily.price} ({ARTIST_PLANS.daily.duration} day access, {ARTIST_PLANS.daily.songLimit === -1 ? 'unlimited' : ARTIST_PLANS.daily.songLimit} uploads)
+                  </SelectItem>
+                  <SelectItem value="weekly">
+                    Weekly — K{ARTIST_PLANS.weekly.price} ({ARTIST_PLANS.weekly.duration} days access, {ARTIST_PLANS.weekly.songLimit === -1 ? 'unlimited' : ARTIST_PLANS.weekly.songLimit} uploads)
+                  </SelectItem>
+                  <SelectItem value="annual">
+                    Annual — K{ARTIST_PLANS.annual.price} ({ARTIST_PLANS.annual.duration} year access, {ARTIST_PLANS.annual.songLimit === -1 ? 'unlimited' : ARTIST_PLANS.annual.songLimit} uploads)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">What happens:</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li>User profile role set to <span className="text-electric font-medium">Artist</span></li>
+                <li>Artist record created if not exists</li>
+                <li>Selected plan subscription activated</li>
+                <li>User receives in-app notification</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPromoteDialog(false)}>Cancel</Button>
+            <Button className="bg-electric hover:bg-electric/90 text-white" onClick={handlePromoteArtist} disabled={promoteLoading}>
+              {promoteLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Promote to Artist
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Play, UserPlus, MoreHorizontal, Music, Disc, Video } from 'lucide-react'
+import { Helmet } from 'react-helmet-async'
 import { useArtist, useArtistSongs, useArtistAlbums, useArtistVideos, useFollowArtist, useUnfollowArtist } from '@/hooks'
 import { usePlayerStore } from '@/store'
 import { Button } from '@/components/ui/button'
@@ -55,7 +56,21 @@ export default function ArtistPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <>
+      <Helmet>
+        <title>{artist.stage_name} — ZedVevo</title>
+        <meta property="og:title" content={artist.stage_name} />
+        <meta property="og:description" content={artist.bio || `Listen to ${artist.stage_name} on ZedVevo — ${formatNumber(artist.total_followers)} followers`} />
+        <meta property="og:image" content={artist.cover_image_url || artist.user?.avatar_url || '/placeholder.jpg'} />
+        <meta property="og:type" content="profile" />
+        <meta property="og:url" content={window.location.href} />
+        <meta property="profile:username" content={artist.stage_name} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={artist.stage_name} />
+        <meta name="twitter:description" content={artist.bio || `Listen to ${artist.stage_name} on ZedVevo`} />
+        <meta name="twitter:image" content={artist.cover_image_url || artist.user?.avatar_url || '/placeholder.jpg'} />
+      </Helmet>
+      <div className="min-h-screen">
       {/* Header */}
       <div className="relative h-80 bg-gradient-to-b from-electric-blue/20 to-transparent">
         <div className="absolute inset-0 bg-gradient-to-t from-deep-black via-transparent to-transparent" />
@@ -237,6 +252,6 @@ export default function ArtistPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </>
   )
 }

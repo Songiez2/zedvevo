@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Play, Pause, Share2, Download, ThumbsUp, MessageCircle } from 'lucide-react'
+import { Helmet } from 'react-helmet-async'
 import { useVideo } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -37,7 +38,27 @@ export default function VideoPage() {
   if (!video) return null
 
   return (
-    <div className="min-h-screen">
+    <>
+      <Helmet>
+        <title>{video.title} by {video.artist?.stage_name} — ZedVevo</title>
+        <meta property="og:title" content={`${video.title} by ${video.artist?.stage_name}`} />
+        <meta property="og:description" content={video.description ? video.description.slice(0, 160) : `Watch ${video.title} on ZedVevo`} />
+        <meta property="og:image" content={video.thumbnail_url || '/placeholder.jpg'} />
+        <meta property="og:type" content="video.other" />
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:video" content={video.video_url} />
+        <meta property="og:video:type" content="video/mp4" />
+        <meta property="og:video:width" content="1280" />
+        <meta property="og:video:height" content="720" />
+        <meta name="twitter:card" content="player" />
+        <meta name="twitter:title" content={`${video.title} by ${video.artist?.stage_name}`} />
+        <meta name="twitter:description" content={video.description ? video.description.slice(0, 160) : `Watch ${video.title} on ZedVevo`} />
+        <meta name="twitter:image" content={video.thumbnail_url || '/placeholder.jpg'} />
+        <meta name="twitter:player" content={window.location.href} />
+        <meta name="twitter:player:width" content="1280" />
+        <meta name="twitter:player:height" content="720" />
+      </Helmet>
+      <div className="min-h-screen">
       {/* Video Player */}
       <div className="relative bg-black">
         <div className="container px-4 py-8">
@@ -138,6 +159,6 @@ export default function VideoPage() {
           </div>
         </motion.div>
       </div>
-    </div>
+    </>
   )
 }

@@ -447,33 +447,38 @@ async function activateArtistSubscription(
     auto_renew: false,
   }
 
-  const { error } = await supabase.from('artist_subscriptions').insert(subscription)
+  // Always update profile to artist first — do this regardless of subscription insert result
+  await supabase
+    .from('profiles')
+    .update({ is_artist: true, role: 'artist' })
+    .eq('id', userId)
+
+  // Ensure artist record exists
+  const { data: artistExists } = await supabase
+    .from('artists')
+    .select('id')
+    .eq('user_id', userId)
+    .single()
+
+  if (!artistExists) {
+    const { data: userData } = await supabase
+      .from('profiles')
+      .select('full_name, username')
+      .eq('id', userId)
+      .single()
+    
+    await supabase.from('artists').insert({
+      user_id: userId,
+      stage_name: userData?.full_name || userData?.username || 'New Artist',
+    })
+  }
+
+  // Upsert subscription (handles existing expired subscriptions gracefully)
+  const { error } = await supabase
+    .from('artist_subscriptions')
+    .upsert(subscription, { onConflict: 'user_id,plan' })
 
   if (!error) {
-    await supabase
-      .from('profiles')
-      .update({ is_artist: true, role: 'artist' })
-      .eq('id', userId)
-
-    const { data: artistExists } = await supabase
-      .from('artists')
-      .select('id')
-      .eq('user_id', userId)
-      .single()
-
-    if (!artistExists) {
-      const { data: userData } = await supabase
-        .from('profiles')
-        .select('full_name, username')
-        .eq('id', userId)
-        .single()
-      
-      await supabase.from('artists').insert({
-        user_id: userId,
-        stage_name: userData?.full_name || userData?.username || 'New Artist',
-      })
-    }
-
     await supabase.from('notifications').insert({
       user_id: userId,
       type: 'artist_activated',
@@ -481,10 +486,11 @@ async function activateArtistSubscription(
       message: `Your ${plan.name} artist plan is now active. You can start uploading music!`,
       data: { plan: planType },
     })
-
-    // Refresh auth state
-    useAuthStore.getState().fetchUser()
   }
+
+  // Always refresh auth state so UI gets updated role immediately
+  useAuthStore.getState().fetchUser()
+  useAuthStore.getState().fetchArtist()
 }
 
 async function createPurchase(

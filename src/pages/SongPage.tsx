@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Play, Pause, Heart, Share2, Download, MoreHorizontal, Clock, User } from 'lucide-react'
+import { Helmet } from 'react-helmet-async'
 import { useSong, useArtistSongs, useFavoriteSong } from '@/hooks'
 import { usePlayerStore } from '@/store'
 import { Button } from '@/components/ui/button'
@@ -77,7 +78,20 @@ export default function SongPage() {
   if (!song) return null
 
   return (
-    <div className="min-h-screen">
+    <>
+      <Helmet>
+        <title>{song.title} by {song.artist?.stage_name} — ZedVevo</title>
+        <meta property="og:title" content={`${song.title} by ${song.artist?.stage_name}`} />
+        <meta property="og:description" content={`Listen to ${song.title} on ZedVevo${song.album ? ` from the album ${song.album.title}` : ''}.`} />
+        <meta property="og:image" content={song.cover_url || '/placeholder.jpg'} />
+        <meta property="og:type" content="music.song" />
+        <meta property="og:url" content={window.location.href} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${song.title} by ${song.artist?.stage_name}`} />
+        <meta name="twitter:description" content={`Listen to ${song.title} on ZedVevo.`} />
+        <meta name="twitter:image" content={song.cover_url || '/placeholder.jpg'} />
+      </Helmet>
+      <div className="min-h-screen">
       {/* Hero */}
       <div className="relative bg-gradient-to-b from-electric-blue/20 to-transparent py-12">
         <div className="container px-4">
@@ -217,6 +231,6 @@ export default function SongPage() {
           </section>
         )}
       </div>
-    </div>
+    </>
   )
 }
