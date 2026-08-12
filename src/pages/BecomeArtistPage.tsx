@@ -100,6 +100,9 @@ export default function BecomeArtistPage() {
           title: 'Congratulations! 🎉',
           description: 'Your artist account has been activated. You can now upload music!',
         })
+        // Refresh auth state before navigating so artist access is granted immediately
+        useAuthStore.getState().fetchUser()
+        useAuthStore.getState().fetchArtist()
         setTimeout(() => {
           setShowPaymentModal(false)
           navigate('/artist')
@@ -149,6 +152,9 @@ export default function BecomeArtistPage() {
           title: 'Congratulations! 🎉',
           description: 'Your artist account has been activated. You can now upload music!',
         })
+        // Refresh auth state before navigating so artist access is granted immediately
+        useAuthStore.getState().fetchUser()
+        useAuthStore.getState().fetchArtist()
         setTimeout(() => {
           setShowPaymentModal(false)
           navigate('/artist')
