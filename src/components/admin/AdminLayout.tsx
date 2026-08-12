@@ -11,24 +11,31 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
-const NAV_ITEMS = [
+const NAV_ITEMS_ADMIN = [
   { label: 'Overview',   path: '/admin',             icon: LayoutDashboard },
-  { label: 'Content',    path: '/admin/content',     icon: Music2 },
-  { label: 'Videos',     path: '/admin/videos',      icon: Video },
-  { label: 'Users',      path: '/admin/users',       icon: Users },
-  { label: 'Payments',   path: '/admin/payments',    icon: CreditCard },
-  { label: 'Downloads',  path: '/admin/downloads',   icon: Download },
-  { label: 'Awards',     path: '/admin/awards',      icon: Trophy },
-  { label: 'Nominees',   path: '/admin/nominees',    icon: Star },
-  { label: 'Trending',   path: '/admin/trending',    icon: TrendingUp },
-  { label: 'Banners',    path: '/admin/banners',     icon: Image },
-  { label: 'Notifications', path: '/admin/notifications', icon: Bell },
-  { label: 'Settings',   path: '/admin/settings',    icon: Settings },
+  { label: 'Content',   path: '/admin/content',     icon: Music2 },
+  { label: 'Videos',    path: '/admin/videos',       icon: Video },
 ];
+
+const NAV_ITEMS_SUPER_ADMIN = [
+  { label: 'Users',         path: '/admin/users',         icon: Users },
+  { label: 'Payments',      path: '/admin/payments',      icon: CreditCard },
+  { label: 'Downloads',     path: '/admin/downloads',     icon: Download },
+  { label: 'Awards',        path: '/admin/awards',        icon: Trophy },
+  { label: 'Nominees',      path: '/admin/nominees',      icon: Star },
+  { label: 'Trending',       path: '/admin/trending',      icon: TrendingUp },
+  { label: 'Banners',       path: '/admin/banners',       icon: Image },
+  { label: 'Notifications', path: '/admin/notifications', icon: Bell },
+  { label: 'Settings',      path: '/admin/settings',      icon: Settings },
+];
+
+const NAV_ITEMS_ALL = [...NAV_ITEMS_ADMIN, ...NAV_ITEMS_SUPER_ADMIN];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const isSuperAdmin = profile?.role === 'super_admin';
+  const navItems = isSuperAdmin ? NAV_ITEMS_ALL : NAV_ITEMS_ADMIN;
 
   const handleSignOut = async () => {
     await signOut();
@@ -45,7 +52,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-        {NAV_ITEMS.map(({ label, path, icon: Icon }) => (
+        {navItems.map(({ label, path, icon: Icon }) => (
           <NavLink
             key={path}
             to={path}

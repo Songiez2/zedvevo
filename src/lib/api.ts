@@ -772,3 +772,25 @@ export async function createNotification(payload: {
   const { error } = await supabase.from('notifications').insert(payload);
   if (error) throw error;
 }
+
+// ============================================================
+// SITE STATS / VISITOR COUNTER
+// ============================================================
+
+export async function getVisitorCount(): Promise<number> {
+  if (!supabase) return 0;
+  const { data, error } = await supabase
+    .from('site_stats')
+    .select('visitor_count')
+    .eq('key', 'main')
+    .single();
+  if (error || !data) return 0;
+  return Number(data.visitor_count);
+}
+
+export async function incrementVisitorCount(): Promise<number> {
+  if (!supabase) return 0;
+  const { data, error } = await supabase.rpc('increment_visitor_count');
+  if (error) return 0;
+  return Number(data);
+}

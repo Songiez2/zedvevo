@@ -22,11 +22,25 @@ import { Navigate as NavRedirect } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { routes } from './routes';
 
-// Guard for admin sub-routes
+// Guard for admin routes — only admin/super_admin can access
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useAuth();
   if (loading) return null;
   if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+    return <NavRedirect to="/" replace />;
+  }
+  return <AdminLayout>{children}</AdminLayout>;
+}
+
+// Guard for super_admin-only routes — redirects admin to /admin overview
+function SuperAdminGuard({ children }: { children: React.ReactNode }) {
+  const { profile, loading } = useAuth();
+  if (loading) return null;
+  if (!profile) return <NavRedirect to="/" replace />;
+  if (profile.role === 'admin') {
+    return <NavRedirect to="/admin" replace />;
+  }
+  if (profile.role !== 'super_admin') {
     return <NavRedirect to="/" replace />;
   }
   return <AdminLayout>{children}</AdminLayout>;
@@ -45,15 +59,15 @@ const App: React.FC = () => {
             <Route path="/admin" element={<AdminGuard><AdminOverviewPage /></AdminGuard>} />
             <Route path="/admin/content"       element={<AdminGuard><AdminContentPage /></AdminGuard>} />
             <Route path="/admin/videos"        element={<AdminGuard><AdminContentPage /></AdminGuard>} />
-            <Route path="/admin/users"         element={<AdminGuard><AdminUsersPage /></AdminGuard>} />
-            <Route path="/admin/payments"      element={<AdminGuard><AdminPaymentsPage /></AdminGuard>} />
-            <Route path="/admin/awards"        element={<AdminGuard><AdminAwardsPage /></AdminGuard>} />
-            <Route path="/admin/nominees"      element={<AdminGuard><AdminAwardsPage /></AdminGuard>} />
-            <Route path="/admin/trending"      element={<AdminGuard><AdminAwardsPage /></AdminGuard>} />
-            <Route path="/admin/downloads"     element={<AdminGuard><AdminDownloadsPage /></AdminGuard>} />
-            <Route path="/admin/notifications" element={<AdminGuard><AdminNotificationsPage /></AdminGuard>} />
-            <Route path="/admin/banners"       element={<AdminGuard><AdminSettingsPage /></AdminGuard>} />
-            <Route path="/admin/settings"      element={<AdminGuard><AdminSettingsPage /></AdminGuard>} />
+            <Route path="/admin/users"         element={<SuperAdminGuard><AdminUsersPage /></SuperAdminGuard>} />
+            <Route path="/admin/payments"      element={<SuperAdminGuard><AdminPaymentsPage /></SuperAdminGuard>} />
+            <Route path="/admin/awards"        element={<SuperAdminGuard><AdminAwardsPage /></SuperAdminGuard>} />
+            <Route path="/admin/nominees"      element={<SuperAdminGuard><AdminAwardsPage /></SuperAdminGuard>} />
+            <Route path="/admin/trending"      element={<SuperAdminGuard><AdminAwardsPage /></SuperAdminGuard>} />
+            <Route path="/admin/downloads"     element={<SuperAdminGuard><AdminDownloadsPage /></SuperAdminGuard>} />
+            <Route path="/admin/notifications" element={<SuperAdminGuard><AdminNotificationsPage /></SuperAdminGuard>} />
+            <Route path="/admin/banners"       element={<SuperAdminGuard><AdminSettingsPage /></SuperAdminGuard>} />
+            <Route path="/admin/settings"      element={<SuperAdminGuard><AdminSettingsPage /></SuperAdminGuard>} />
 
             {/* All other routes wrapped in the public layout */}
             <Route path="/*" element={

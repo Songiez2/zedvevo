@@ -1339,3 +1339,41 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- ============================================
+-- SITE STATS TABLE (visitor counter)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS site_stats (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    key         TEXT UNIQUE NOT NULL DEFAULT 'main',
+    visitor_count BIGINT NOT NULL DEFAULT 0,
+    updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Function to increment and return visitor count
+CREATE OR REPLACE FUNCTION increment_visitor_count()
+RETURNS BIGINT AS $$
+DECLARE
+    new_count BIGINT;
+BEGIN
+    INSERT INTO site_stats (key, visitor_count, updated_at)
+    VALUES ('main', 1, NOW())
+    ON CONFLICT (key) DO UPDATE SET
+        visitor_count = site_stats.visitor_count + 1,
+        updated_at = NOW()
+    RETURNING site_stats.visitor_count INTO new_count;
+    RETURN new_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================
+-- SITE STATS POLICIES
+-- ============================================
+
+-- Anyone can increment the visitor count (for tracking)
+CREATE POLICY "Anyone can increment visitor count" ON site_stats
+    FOR UPDATE USING (true) WITH CHECK (true);
+
+-- Everyone can read site stats
+CREATE POLICY "Site stats are readable by everyone" ON site_stats
+    FOR SELECT USING (true);

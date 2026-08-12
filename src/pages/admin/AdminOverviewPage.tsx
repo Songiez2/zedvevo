@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Users, Music2, Video, CreditCard, TrendingUp, Download, Trophy, CheckCircle2,
+  Eye,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,6 +11,7 @@ import {
 } from 'recharts';
 import {
   getAllProfiles, getSongs, getVideos, getAllPayments, getAllDownloads,
+  getVisitorCount, incrementVisitorCount,
 } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import type { Payment } from '@/types/index';
@@ -50,6 +52,7 @@ export default function AdminOverviewPage() {
   const [videos, setVideos] = useState<{ status: string }[]>([]);
   const [payments, setPayments]   = useState<Payment[]>([]);
   const [downloads, setDownloads] = useState(0);
+  const [visitors, setVisitors]   = useState(0);
 
   useEffect(() => {
     Promise.all([
@@ -58,6 +61,11 @@ export default function AdminOverviewPage() {
     ]).then(([u, s, v, p, d]) => {
       setUsers(u.length); setSongs(s); setVideos(v); setPayments(p); setDownloads(d.length);
     }).catch(console.error).finally(() => setLoading(false));
+
+    // Increment visitor count and fetch updated total
+    incrementVisitorCount()
+      .then(count => setVisitors(count))
+      .catch(() => getVisitorCount().then(setVisitors).catch(console.error));
   }, []);
 
   const successPayments = payments.filter(p => p.status === 'successful');
@@ -72,10 +80,10 @@ export default function AdminOverviewPage() {
     { label: 'Songs',            value: songs.length,                 icon: Music2,       color: 'text-purple-500' },
     { label: 'Videos',           value: videos.length,                icon: Video,        color: 'text-pink-500' },
     { label: 'Total Revenue',    value: formatCurrency(revenue),      icon: CreditCard,   color: 'text-green-500' },
-    { label: 'Transactions',     value: successPayments.length,       icon: TrendingUp,   color: 'text-accent' },
-    { label: 'Downloads',        value: downloads,                    icon: Download,     color: 'text-orange-500' },
-    { label: 'Pending Content',  value: pendingSongs + pendingVideos, icon: CheckCircle2, color: 'text-yellow-500' },
-    { label: 'Awards Content',   value: songs.length + videos.length, icon: Trophy,       color: 'text-rose-500' },
+    { label: 'Transactions',    value: successPayments.length,       icon: TrendingUp,   color: 'text-accent' },
+    { label: 'Downloads',       value: downloads,                    icon: Download,     color: 'text-orange-500' },
+    { label: 'Pending Content', value: pendingSongs + pendingVideos, icon: CheckCircle2, color: 'text-yellow-500' },
+    { label: 'Visitors',         value: visitors,                     icon: Eye,          color: 'text-cyan-500' },
   ];
 
   return (
