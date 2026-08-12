@@ -43,7 +43,7 @@ export default function VideoPage() {
         <title>{video.title} by {video.artist?.stage_name} — ZedVevo</title>
         <meta property="og:title" content={`${video.title} by ${video.artist?.stage_name}`} />
         <meta property="og:description" content={video.description ? video.description.slice(0, 160) : `Watch ${video.title} on ZedVevo`} />
-        <meta property="og:image" content={video.thumbnail_url || '/placeholder.jpg'} />
+        <meta property="og:image" content={video.thumbnail_url ? `${window.location.origin}${video.thumbnail_url}` : `${window.location.origin}/placeholder.jpg`} />
         <meta property="og:type" content="video.other" />
         <meta property="og:url" content={window.location.href} />
         <meta property="og:video" content={video.video_url} />

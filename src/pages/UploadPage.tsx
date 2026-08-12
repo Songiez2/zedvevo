@@ -325,7 +325,7 @@ export default function UploadPage() {
     } finally { setUploading(false); }
   };
 
-  const canUpload = (profile?.role === 'admin' || profile?.role === 'super_admin') || (subscription && (
+  const canUpload = (profile?.role === 'admin' || profile?.role === 'super_admin' || profile?.role === 'artist') || (subscription && (
     subscription.plan_type !== 'k10_single' ||
     (subscription.uploads_used || 0) < 1
   ) && (

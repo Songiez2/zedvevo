@@ -191,6 +191,7 @@ export const useAuthStore = create<AuthState>()(
           user: data,
           isAdmin: data?.role === 'super_admin' || data?.role === 'admin',
           isSuperAdmin: data?.role === 'super_admin',
+          isArtist: data?.role === 'artist',
         })
       },
 

@@ -83,13 +83,13 @@ export default function SongPage() {
         <title>{song.title} by {song.artist?.stage_name} — ZedVevo</title>
         <meta property="og:title" content={`${song.title} by ${song.artist?.stage_name}`} />
         <meta property="og:description" content={`Listen to ${song.title} on ZedVevo${song.album ? ` from the album ${song.album.title}` : ''}.`} />
-        <meta property="og:image" content={song.cover_url || '/placeholder.jpg'} />
+        <meta property="og:image" content={song.cover_url ? `${window.location.origin}${song.cover_url}` : `${window.location.origin}/placeholder.jpg`} />
         <meta property="og:type" content="music.song" />
         <meta property="og:url" content={window.location.href} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${song.title} by ${song.artist?.stage_name}`} />
         <meta name="twitter:description" content={`Listen to ${song.title} on ZedVevo.`} />
-        <meta name="twitter:image" content={song.cover_url || '/placeholder.jpg'} />
+        <meta name="twitter:image" content={song.cover_url ? `${window.location.origin}${song.cover_url}` : `${window.location.origin}/placeholder.jpg`} />
       </Helmet>
       <div className="min-h-screen">
       {/* Hero */}
